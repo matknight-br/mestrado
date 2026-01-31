@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz da Informática Educativa - Edição IF</title>
+    <style>
+        :root {
+            --if-green: #2f9e41;
+            --if-red: #c8191e;
+            --dark-bg: #1e1e1e;
+            --card-bg: #2d2d2d;
+            --text-white: #f5f5f5;
+            --text-gray: #b0b0b0;
+            --accent-gold: #ffcc00;
+        }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: var(--dark-bg);
+            color: var(--text-white);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            background-image: radial-gradient(circle at 50% 50%, #2a3b2a 0%, #1a1a1a 100%);
+        }
+        /* Logos */
+        .top-logo {
+            position: absolute; top: 20px; height: 150px; width: 150px;
+ 
+        }
+        .logo-left { left: 15px;
+					background-color: rgba(255, 255, 255, 0.95); 
+            padding: 2px 2px; 
+            border-radius: 15px;
+		}
+        .logo-right { 
+            right: 30px; 
+			background-color: rgba(255, 255, 255, 0.95); 
+            padding: 2px 2px; 
+            border-radius: 15px;
+        }
+
+        /* Telas */
+        .screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 10; transition: opacity 0.5s; padding: 20px; box-sizing: border-box;
+        }
+        .hidden { display: none !important; opacity: 0; pointer-events: none; }
+
+        /* Intro */
+        #intro-screen { background: linear-gradient(135deg, rgba(47,158,65,0.1) 0%, rgba(0,0,0,0.9) 100%); }
+        #intro-screen h1 { color: var(--if-green); font-size: 3rem; text-align: center; margin-bottom: 10px; text-shadow: 0 0 10px rgba(47,158,65,0.5); }
+        #intro-screen h2 { font-size: 1.2rem; color: var(--text-gray); margin-bottom: 30px; border-bottom: 2px solid var(--if-red); }
+        
+        .group-members { background: rgba(0,0,0,0.4); border: 1px solid var(--if-green); padding: 20px; border-radius: 10px; margin-bottom: 30px; text-align: center; }
+        .group-members p { margin: 5px 0; color: #ddd; }
+        
+        .start-btn {
+            background: var(--if-green); color: white; font-size: 1.5rem; padding: 15px 50px;
+            border: none; border-radius: 50px; cursor: pointer; font-weight: bold;
+            box-shadow: 0 0 15px rgba(47,158,65,0.4); animation: pulse 2s infinite; transition: 0.3s;
+        }
+        .start-btn:hover { transform: scale(1.05); background: #36b04a; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(47,158,65,0.7); } 70% { box-shadow: 0 0 0 10px rgba(47,158,65,0); } 100% { box-shadow: 0 0 0 0 rgba(47,158,65,0); } }
+
+        /* Jogo */
+        #game-container {
+            width: 100%; max-width: 900px; background: var(--card-bg);
+            border: 2px solid var(--if-green); border-top: 6px solid var(--if-green);
+            border-radius: 15px; padding: 25px; box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+            display: flex; flex-direction: column; gap: 15px; position: relative;
+        }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #444; padding-bottom: 10px; }
+        .status-info { font-size: 1.1rem; color: var(--text-gray); }
+        .status-info span { color: var(--if-green); font-weight: bold; font-size: 1.3rem; }
+        
+        .timer-box {
+            font-size: 2rem; font-weight: bold; color: var(--text-white); background: #111;
+            width: 60px; height: 60px; display: flex; justify-content: center; align-items: center;
+            border-radius: 50%; border: 4px solid var(--if-green);
+        }
+        .timer-warning { color: var(--if-red); border-color: var(--if-red); animation: blink 0.5s infinite alternate; }
+        @keyframes blink { from { box-shadow: 0 0 5px var(--if-red); } to { box-shadow: 0 0 20px var(--if-red); } }
+
+        #question-text {
+            font-size: 1.3rem; min-height: 100px; display: flex; align-items: center; justify-content: center;
+            text-align: center; background: rgba(0,0,0,0.2); padding: 20px; border-radius: 8px; border-left: 5px solid var(--if-green);
+        }
+
+        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .option-btn {
+            background: #3a3a3a; color: white; border: 2px solid transparent; padding: 12px 15px;
+            font-size: 1rem; border-radius: 8px; cursor: pointer; transition: 0.2s; text-align: left;
+            display: flex; align-items: center; min-height: 55px;
+        }
+        .option-btn:hover:not(:disabled) { background: var(--if-green); transform: translateY(-2px); }
+        .option-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .help-container { display: flex; justify-content: center; gap: 20px; margin-top: 10px; }
+        .help-btn {
+            background: transparent; border: 2px solid var(--if-green); color: var(--if-green);
+            padding: 8px 20px; border-radius: 20px; font-weight: bold; cursor: pointer; transition: 0.3s;
+        }
+        .help-btn:hover:not(:disabled) { background: var(--if-green); color: white; }
+        .help-btn:disabled { border-color: #555; color: #555; }
+
+        /* Modais */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 2000; backdrop-filter: blur(5px); }
+        .modal-content {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: var(--card-bg); color: var(--text-white); padding: 25px;
+            border-radius: 10px; border: 2px solid var(--if-green); z-index: 2001;
+            max-width: 700px; width: 90%; max-height: 90vh; overflow-y: auto;
+        }
+        .modal-content h2 { color: var(--if-green); border-bottom: 1px solid #555; padding-bottom: 10px; margin-top: 0; }
+        .feedback-section { background: rgba(47,158,65,0.1); padding: 10px; border-radius: 5px; margin-bottom: 10px; border-left: 3px solid var(--if-green); }
+        .critique-section { background: rgba(200,25,30,0.1); padding: 10px; border-radius: 5px; margin-bottom: 20px; border-left: 3px solid var(--if-red); }
+        .modal-btn { background: var(--if-green); color: white; border: none; padding: 10px 30px; border-radius: 5px; cursor: pointer; float: right; }
+        
+        #end-screen h1 { font-size: 3rem; margin-bottom: 20px; }
+        .restart-btn { background: var(--if-green); color: white; padding: 15px 40px; border: none; border-radius: 8px; font-size: 1.2rem; cursor: pointer; }
+
+        @media(max-width: 600px) {
+            .options-grid { grid-template-columns: 1fr; }
+            .top-logo { height: 50px; }
+            #intro-screen h1 { font-size: 2rem; margin-top: 50px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="audio-context-starter"></div>
+
+    <!-- INTRO -->
+    <div id="intro-screen" class="screen">
+        <!-- Substitua os SRC pelas imagens locais se desejar -->
+	    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/Instituto_Federal_do_Rio_Grande_do_Sul_-_Marca_Vertical_2015.svg/500px-Instituto_Federal_do_Rio_Grande_do_Sul_-_Marca_Vertical_2015.svg.png" alt="Logo IFRS" class="top-logo logo-left">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/3/3b/Instituto_Federal_de_Mato_Grosso_do_Sul_-_Marca_Vertical_2015.svg" alt="Logo IFMS" class="top-logo logo-right">
+        <h1>Quiz da Informática na Educação</h1>
+        <h2>Políticas Públicas no Brasil (1980 - 2024)</h2>
+        <div class="group-members">
+            <p><strong>Criado por:</strong></p>
+            <p>Bruna Paim Reis</p>
+            <p>Maria José Vasconcelos Pereira</p>
+            <p>Matheus Jardim Guerreiro da Silva</p>
+        </div>
+        <button class="start-btn" onclick="startGame()">INICIAR</button>
+    </div>
+
+    <!-- FIM -->
+    <div id="end-screen" class="screen hidden">
+        <h1 id="end-title">FIM DE JOGO</h1>
+        <p id="end-msg" style="font-size: 1.5rem; color: #ccc;">...</p>
+        <button class="restart-btn" onclick="location.reload()">Jogar Novamente</button>
+    </div>
+
+    <!-- MODAL FEEDBACK -->
+    <div id="overlay-feedback" class="modal-overlay">
+        <div class="modal-content">
+            <h2 id="feedback-title">Análise</h2>
+            <div class="feedback-section">
+                <strong>Contexto:</strong> <p id="feedback-summary"></p>
+            </div>
+            <div class="critique-section">
+                <strong style="color:#ff6b6b">Reflexão Crítica:</strong> <p id="feedback-critique"></p>
+            </div>
+            <button onclick="closeFeedbackModal()" class="modal-btn">Continuar</button>
+        </div>
+    </div>
+
+    <!-- MODAL DICA -->
+    <div id="overlay-tip" class="modal-overlay">
+        <div class="modal-content" style="text-align:center; max-width:400px;">
+            <h2>Dica</h2>
+            <p id="tip-text" style="font-size:1.2rem; margin:20px 0;"></p>
+            <button onclick="closeTipModal()" class="modal-btn" style="float:none; width:100%;">Voltar</button>
+        </div>
+    </div>
+
+    <!-- JOGO -->
+    <div id="game-container" class="hidden">
+        <div class="header">
+            <div class="status-info">Questão <span id="q-current">1</span>/<span id="q-total">15</span><br><small id="q-decade">DÉCADA</small></div>
+            <div id="timer-display" class="timer-box">20</div>
+        </div>
+        <div id="question-area">
+            <div id="question-text">...</div>
+            <div class="options-grid">
+                <button class="option-btn" id="opt0" onclick="checkAnswer(0)">A)</button>
+                <button class="option-btn" id="opt1" onclick="checkAnswer(1)">B)</button>
+                <button class="option-btn" id="opt2" onclick="checkAnswer(2)">C)</button>
+                <button class="option-btn" id="opt3" onclick="checkAnswer(3)">D)</button>
+            </div>
+        </div>
+        <div class="help-container">
+            <button class="help-btn" id="btn-tip" onclick="useTip()">💡 Dica (1)</button>
+            <button class="help-btn" id="btn-remove" onclick="removeTwo()">❌ Remover 2 (1)</button>
+        </div>
+    </div>
+
+    <script>
+        // --- ÁUDIO (Web Audio API) ---
+		const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+		const SoundFX = {
+			// Aumentei o volume padrão (v) de 0.1 para 0.5
+			playTone: (f, t, d, v=0.9) => { 
+				const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+				o.type=t; o.frequency.value=f; 
+				
+				// Volume inicial definido aqui
+				g.gain.value=v; 
+				
+				// O som diminui suavemente até sumir
+				g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+d);
+				
+				o.connect(g); g.connect(audioCtx.destination); 
+				o.start(); o.stop(audioCtx.currentTime+d);
+			},
+
+			// Aumentei os volumes individuais (o último número de cada chamada)
+			playIntro: () => [440,554,659,880].forEach((f,i)=>setTimeout(()=>SoundFX.playTone(f,'square',0.5, 0.9), i*150)),
+			
+			// Aumentei para 0.4
+			playCorrect: () => { SoundFX.playTone(600,'sine',0.1, 0.9); setTimeout(()=>SoundFX.playTone(900,'sine',0.3, 0.9),100); },
+			
+			// Som de erro mais forte (0.5)
+			playWrong: () => SoundFX.playTone(150,'sawtooth',0.8, 0.9),
+			
+			// Vitória bem alta (0.4)
+			playVictory: () => [523,659,783,1046].forEach((f,i)=>setTimeout(()=>SoundFX.playTone(f,'square',0.4, 0.9), i*200))
+		};
+
+        // --- QUESTÕES ---
+        const questionPool = [
+            // 1980
+            { decade: 1980, correct: 1, question: "Em 1983, qual foi o primeiro projeto piloto de informática educativa lançado pelo governo?", options: ["ProInfo", "Projeto EDUCOM", "UCA", "Educação Conectada"], tip: "Envolveu universidades e a SEI.", summary: "O Projeto EDUCOM instalou centros pilotos em universidades federais.", critique: "Ficou restrito às universidades, demorando a impactar a escola básica." },
+            { decade: 1980, correct: 1, question: "Qual linguagem predominou nos anos 80, famosa pela 'tartaruga'?", options: ["Java", "Logo", "Python", "Basic"], tip: "Criada por Seymour Papert.", summary: "O Logo permitia aprender geometria e lógica comandando uma tartaruga.", critique: "Muitas escolas usaram a ferramenta de forma mecânica, ignorando o construcionismo." },
+            { decade: 1980, correct: 2, question: "Como a 'Reserva de Mercado' (1984) impactou a educação?", options: ["Barateou PCs", "Inundou de importados", "Encareceu equipamentos", "Criou a internet"], tip: "Proibia importações.", summary: "Para proteger a indústria nacional, o Brasil proibiu importações, gerando PCs caros.", critique: "Atrasou a alfabetização digital de uma geração devido aos custos proibitivos." },
+            { decade: 1980, correct: 0, question: "O que eram os CIEDs criados no fim dos anos 80?", options: ["Centros estaduais descentralizados", "Lojas", "Escolas privadas", "Fábricas"], tip: "Tentativa de descentralização.", summary: "Visavam capacitar equipes estaduais com base na experiência universitária.", critique: "A descontinuidade política fechou muitos centros a cada troca de governo." },
+            { decade: 1980, correct: 0, question: "Qual teórico influenciou o uso do computador como ferramenta de construção?", options: ["Seymour Papert", "Skinner", "Pavlov", "Montessori"], tip: "Autor de 'A Máquina das Crianças'.", summary: "Defendia que a criança ensinasse o computador (construcionismo).", critique: "Sua visão chocou-se com a rigidez do sistema escolar tradicional." },
+            
+            // 1990
+            { decade: 1990, correct: 1, question: "Em 1997, o MEC lançou o ProInfo. Qual era sua estrutura local?", options: ["Lan Houses", "NTEs", "Cinemas", "Shoppings"], tip: "Núcleos de Tecnologia.", summary: "O ProInfo criou os NTEs para capacitar professores da rede pública.", critique: "Muitos NTEs foram sucateados ou perderam o foco pedagógico com o tempo." },
+            { decade: 1990, correct: 1, question: "O Programa TV Escola (1995) usava qual tecnologia?", options: ["Fibra ótica", "TV e Fitas VHS", "VR", "Tablets"], tip: "Via satélite.", summary: "Distribuía kits com TV, vídeo e parabólica para formação docente.", critique: "O vídeo virou 'tapa-buraco' de aula vaga, sem integração curricular." },
+            { decade: 1990, correct: 1, question: "O que os PCNs (1998) disseram sobre tecnologia?", options: ["Proibiram", "Tema Transversal", "Disciplina isolada", "Apenas no ensino médio"], tip: "Diretrizes curriculares.", summary: "Sugeriram que TICs deveriam perpassar todas as disciplinas.", critique: "Sem formação prática, professores de outras áreas continuaram sem usar o laboratório." },
+            { decade: 1990, correct: 1, question: "A Internet comercial nos anos 90 mudou o foco para:", options: ["Programação", "Pesquisa e Comunicação", "Robótica", "Datilografia"], tip: "Janela para o mundo.", summary: "Deslocou o foco do 'programar' para o 'navegar e pesquisar'.", critique: "A pesquisa virou 'Ctrl+C Ctrl+V', sem curadoria crítica da informação?" },
+            { decade: 1990, correct: 1, question: "Principal obstáculo da internet nas escolas nos anos 90?", options: ["Desinteresse", "Conexão discada cara", "Censura", "Excesso de velocidade"], tip: "Ocupava o telefone.", summary: "A internet discada era lenta e inviabilizava o uso coletivo.", critique: "A infraestrutura de telecom era um gargalo para a inclusão digital." },
+
+            // 2000
+            { decade: 2000, correct: 1, question: "O projeto UCA visava qual modelo?", options: ["Laboratório", "1:1 (Um por aluno)", "Desktop", "Lousa"], tip: "Laptop individual.", summary: "Distribuiu laptops (Classmate) para alunos, inspirado no OLPC.", critique: "Falhou por falta de infraestrutura elétrica, rede e manutenção nas escolas." },
+            { decade: 2000, correct: 1, question: "Qual sistema operacional o governo incentivou nos anos 2000?", options: ["Windows", "Linux Educacional", "MacOS", "Android"], tip: "Software Livre.", summary: "O MEC criou sua distro Linux para economizar licenças.", critique: "Houve resistência cultural; muitos formatavam para instalar Windows pirata." },
+            { decade: 2000, correct: 1, question: "O Portal do Professor (2008) incentivava:", options: ["Vendas", "Troca de recursos/aulas", "Ponto eletrônico", "Vigilância"], tip: "Colaboração.", summary: "Repositório para postar aulas e baixar objetos digitais.", critique: "Falta de tempo e cultura de compartilhamento limitaram o uso." },
+            { decade: 2000, correct: 1, question: "O Programa Banda Larga nas Escolas (2008) foi acordo com:", options: ["NASA", "Teles/Operadoras", "Exército", "Google"], tip: "Troca de metas.", summary: "Governo trocou metas de telefonia por internet nas escolas.", critique: "A velocidade entregue (2Mbps) era inútil para centenas de alunos simultâneos." },
+            { decade: 2000, correct: 1, question: "Objetivo dos Telecentros Comunitários:", options: ["Jogos", "Inclusão digital da comunidade", "Venda", "Inglês"], tip: "Acesso público.", summary: "Levavam internet para áreas carentes.", critique: "Muitos viraram 'lan houses de jogos' sem mediação pedagógica." },
+
+            // 2010
+            { decade: 2010, correct: 1, question: "O que aconteceu com os tablets comprados em 2012?", options: ["Sucesso total", "Ficaram guardados/sem uso", "Foram roubados", "Substituíram livros"], tip: "Sem Wi-Fi.", summary: "Escolas receberam tablets sem ter Wi-Fi ou apps instalados.", critique: "Exemplo de tecnicismo: jogar hardware sem planejamento pedagógico." },
+            { decade: 2010, correct: 1, question: "A BNCC (2017) definiu 'Cultura Digital' como:", options: ["Eletiva", "Competência Geral Obrigatória", "Proibida", "Técnica"], tip: "Competência 5.", summary: "Direito de aprendizagem de todo aluno brasileiro.", critique: "Como cobrar isso em escolas sem saneamento ou eletricidade?" },
+            { decade: 2010, correct: 0, question: "A Educação Conectada (2017) inovou ao:", options: ["Repassar verba para escola contratar net", "Centralizar", "Usar satélite", "Proibir net"], tip: "Autonomia.", summary: "Enviava verba (PDDE) para diretora contratar fibra local.", critique: "Não resolve em áreas rurais onde não há provedor para contratar." },
+            { decade: 2010, correct: 1, question: "O que são REA?", options: ["Softwares", "Recursos Educacionais Abertos", "Livros caros", "Vírus"], tip: "Licença aberta.", summary: "Materiais que podem ser adaptados e compartilhados legalmente.", critique: "A cultura de direitos autorais fechados ainda barra sua disseminação." },
+            { decade: 2010, correct: 1, question: "Tendência 'BYOD' significa:", options: ["Proibir celular", "Traga seu próprio dispositivo", "Governo dá tudo", "Laboratório"], tip: "Uso do celular do aluno.", summary: "Permitir uso do smartphone do aluno em aula.", critique: "Gera exclusão: quem tem celular ruim ou sem dados fica de fora." },
+
+            // 2020
+            { decade: 2020, correct: 1, question: "A pandemia (2020) escancarou:", options: ["Excesso de tech", "O Fosso Digital", "Facilidade do EAD", "Inutilidade do PC"], tip: "Desigualdade.", summary: "Alunos pobres ficaram sem acesso enquanto ricos seguiam online.", critique: "Internet foi reconhecida tardiamente como direito essencial." },
+            { decade: 2020, correct: 1, question: "A Lei 14.533 (PNED) propõe:", options: ["Apenas Word", "Letramento e Computação", "Venda de dados", "Fim da escola"], tip: "Lei de 2023.", summary: "Ensino de computação como conhecimento fundamental.", critique: "Quem dará essas aulas? Faltam professores licenciados." },
+            { decade: 2020, correct: 1, question: "Risco da 'Plataformização' da educação:", options: ["Madeira", "Dependência de Big Techs/Dados", "Petróleo", "Jogos"], tip: "Privacidade.", summary: "Redes públicas dependentes de Google/Microsoft.", critique: "Estamos criando uma dependência colonial digital e entregando dados?" },
+            { decade: 2020, correct: 1, question: "Debate sobre IA Generativa (ChatGPT) em 2023:", options: ["Conserto", "Plágio vs Autoria", "Eletricidade", "Salários"], tip: "Redação.", summary: "IA forçou repensar a avaliação e o 'dever de casa'.", critique: "Como ensinar a pensar COM a IA sem terceirizar o raciocínio?" },
+            { decade: 2020, correct: 1, question: "LGPD nas escolas exige:", options: ["Proibir chamada", "Proteção de dados de menores", "Facebook", "Fotos"], tip: "Lei de Dados.", summary: "Escolas são responsáveis por proteger dados dos alunos.", critique: "Maioria das escolas não tem segurança cibernética adequada." }
+        ];
+
+        // --- LÓGICA ---
+        let queue = [], curr = 0, tips = 1, rems = 1, timer = 20, interval, active = false, currQ;
+
+        function startGame() {
+            if(audioCtx.state==='suspended') audioCtx.resume();
+            SoundFX.playIntro();
+            document.getElementById('intro-screen').classList.add('hidden');
+            document.getElementById('end-screen').classList.add('hidden');
+            document.getElementById('game-container').classList.remove('hidden');
+            
+            // Montar fila: 3 de cada década
+            queue = [];
+            [1980,1990,2000,2010,2020].forEach(d => {
+                let p = questionPool.filter(q=>q.decade===d).sort(()=>0.5-Math.random());
+                queue.push(...p.slice(0,3));
+            });
+            
+            curr = 0; tips = 2; rems = 2;
+            document.getElementById('q-total').innerText = queue.length;
+            updateHelp();
+            setTimeout(loadQ, 1000);
+            active = true;
+        }
+
+        function loadQ() {
+            if(!active) return;
+            currQ = queue[curr];
+            document.getElementById('q-current').innerText = curr+1;
+            document.getElementById('q-decade').innerText = `DÉCADA DE ${currQ.decade}`;
+            document.getElementById('question-text').innerText = currQ.question;
+            
+            [0,1,2,3].forEach(i => {
+                let b = document.getElementById(`opt${i}`);
+                b.innerText = ["A) ","B) ","C) ","D) "][i] + currQ.options[i];
+                b.disabled = false; b.style.opacity = 1; b.style.background = "#3a3a3a"; b.style.color="white";
+            });
+            
+            SoundFX.playTone(200,'sine',0.5);
+            startTimer();
+        }
+
+        function startTimer() {
+            clearInterval(interval); timer = 20;
+            const d = document.getElementById('timer-display');
+            d.innerText = timer; d.classList.remove('timer-warning');
+            interval = setInterval(()=>{
+                timer--; d.innerText = timer;
+                if(timer<=5) { d.classList.add('timer-warning'); SoundFX.playTone(400,'square',0.1,0.05); }
+                if(timer<=0) { clearInterval(interval); checkAnswer(-1); }
+            }, 1000);
+        }
+
+        function checkAnswer(idx) {
+            clearInterval(interval);
+            let correct = currQ.correct;
+            let isCorrect = (idx === correct);
+            [0,1,2,3].forEach(i=>document.getElementById(`opt${i}`).disabled=true);
+
+            if(idx !== -1) {
+                let btn = document.getElementById(`opt${idx}`);
+                if(isCorrect) { btn.style.background="var(--if-green)"; SoundFX.playCorrect(); }
+                else { btn.style.background="var(--if-red)"; SoundFX.playWrong(); }
+            } else SoundFX.playWrong();
+
+            document.getElementById(`opt${correct}`).style.background = "var(--if-green)";
+            
+            setTimeout(()=>{
+                document.getElementById('feedback-title').innerText = isCorrect ? "Correto!" : "Incorreto!";
+                document.getElementById('feedback-title').style.color = isCorrect ? "var(--if-green)" : "var(--if-red)";
+                document.getElementById('feedback-summary').innerText = currQ.summary;
+                document.getElementById('feedback-critique').innerText = currQ.critique;
+                document.getElementById('overlay-feedback').style.display='block';
+                
+                // Salva estado para botão continuar
+                document.getElementById('overlay-feedback').onclick = (e) => {
+                   if(e.target.tagName !== 'BUTTON') return;
+                   document.getElementById('overlay-feedback').style.display='none';
+                   if(isCorrect) {
+                       curr++;
+                       if(curr < queue.length) loadQ();
+                       else victory();
+                   } else gameOver();
+                };
+            }, 1000);
+        }
+
+        function closeFeedbackModal() { /* Gerido no onclick acima para passar state */ }
+
+        function gameOver() {
+            active = false;
+            document.getElementById('game-container').classList.add('hidden');
+            document.getElementById('end-screen').classList.remove('hidden');
+            document.getElementById('end-title').innerText = "FIM DE JOGO";
+            document.getElementById('end-title').style.color = "var(--if-red)";
+            document.getElementById('end-msg').innerText = `Parou na questão ${curr+1}.`;
+        }
+
+        function victory() {
+            active = false;
+            document.getElementById('game-container').classList.add('hidden');
+            document.getElementById('end-screen').classList.remove('hidden');
+            document.getElementById('end-title').innerText = "PARABÉNS!";
+            document.getElementById('end-title').style.color = "var(--accent-gold)";
+            document.getElementById('end-msg').innerText = "Você completou a jornada!";
+            SoundFX.playVictory();
+        }
+
+        function updateHelp() {
+            document.getElementById('btn-tip').innerText=`💡 Dica (${tips})`;
+            document.getElementById('btn-tip').disabled = (tips===0);
+            document.getElementById('btn-remove').innerText=`❌ Remover 2 (${rems})`;
+            document.getElementById('btn-remove').disabled = (rems===0);
+        }
+
+        function useTip() {
+            if(tips>0) {
+                tips--; updateHelp(); clearInterval(interval);
+                document.getElementById('tip-text').innerText = currQ.tip;
+                document.getElementById('overlay-tip').style.display='block';
+            }
+        }
+        function closeTipModal() { document.getElementById('overlay-tip').style.display='none'; if(active) startTimer(); }
+
+        function removeTwo() {
+            if(rems>0) {
+                rems--; updateHelp();
+                let c = 0;
+                while(c<2) {
+                    let r = Math.floor(Math.random()*4);
+                    let b = document.getElementById(`opt${r}`);
+                    if(r !== currQ.correct && b.style.opacity != 0) {
+                        b.style.opacity=0; b.disabled=true; c++;
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>
