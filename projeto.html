@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Projeto Escola Soberana | Infraestrutura & Cultura Digital</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        .chart-container { 
+            position: relative; 
+            width: 100%; 
+            max-width: 600px; 
+            margin: 0 auto; 
+            height: 300px; 
+            max-height: 400px; 
+        }
+        @media (min-width: 768px) { .chart-container { height: 350px; } }
+        
+        /* Custom UI Elements */
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        .nav-active { border-bottom: 2px solid #0f172a; color: #0f172a; font-weight: 600; }
+        
+        /* Network Node Styles for Infrastructure Demo */
+        .network-node {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+            transition: all 0.5s ease;
+        }
+        .server-node { background-color: #3b82f6; color: white; border: 4px solid #1e40af; width: 60px; height: 60px; z-index: 10; }
+        .client-node { background-color: #94a3b8; color: white; border: 2px solid #64748b; }
+        .client-active { background-color: #22c55e; border-color: #15803d; box-shadow: 0 0 10px #22c55e; }
+        .packet {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background-color: #eab308;
+            border-radius: 50%;
+            opacity: 0;
+        }
+    </style>
+    <!-- Chosen Palette: Warm Neutrals & Professional Blues. 
+         Background: Slate-50 (#f8fafc)
+         Text: Slate-800 (#1e293b)
+         Primary: Blue-600 (#2563eb) for actions/highlights
+         Secondary: Slate-400 (#94a3b8) for inactive elements
+         Accent: Green-500 (#22c55e) for success/active states
+    -->
+
+    <!-- Application Structure Plan:
+         1. Header/Nav: Simple top bar for easy section jumping.
+         2. Hero Section: Introduces the "Escola Soberana" concept and the Master's focus.
+         3. Concept Dashboard (Theoretical Framework): Interactive cards explaining Algorithmic Governmentality and Digital Culture.
+         4. Infrastructure Simulator (The Solution): A visual, interactive diagram demonstrating the cluster of old PCs (LTSP). Users can "boot" the lab.
+         5. Cost & Impact Analysis: Charts comparing the proposed model vs. traditional proprietary models.
+         6. Software Stack: An interactive catalog of the open-source tools (LTSP, Epoptes, etc.) required.
+         7. Bibliography: A filterable list of academic references.
+         WHY: This structure moves from Problem (Theory) -> Solution (Infra/Software) -> Validation (Cost/Biblio), mimicking a project proposal defense flow.
+    -->
+
+    <!-- Visualization & Content Choices:
+         - Theory: Cards with hover effects to reveal definitions. (Goal: Inform/Explain complex concepts simply).
+         - Infrastructure: CSS/JS Network Topology simulation. (Goal: Organize/Demonstrate how the cluster works without static images).
+         - Cost: Chart.js Bar Chart. (Goal: Compare financial viability).
+         - Software: Accordion/Tab list. (Goal: Inform/Document specific tools).
+         - Bibliography: JS Searchable List. (Goal: Organize references).
+         - NO SVG/Mermaid used. All visuals are DOM elements or Canvas.
+    -->
+    
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="bg-slate-50">
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-50 bg-white/90 backdrop-blur-sm border-b border-slate-200 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <span class="text-xl font-bold text-slate-800">Escola Soberana</span>
+                </div>
+                <div class="hidden md:flex space-x-8 items-center" id="nav-links">
+                    <button onclick="navigateTo('home')" class="nav-btn nav-active text-slate-600 hover:text-slate-900 px-3 py-2 text-sm font-medium transition-colors">Visão Geral</button>
+                    <button onclick="navigateTo('theory')" class="nav-btn text-slate-600 hover:text-slate-900 px-3 py-2 text-sm font-medium transition-colors">Fundamentação</button>
+                    <button onclick="navigateTo('infra')" class="nav-btn text-slate-600 hover:text-slate-900 px-3 py-2 text-sm font-medium transition-colors">Infraestrutura</button>
+                    <button onclick="navigateTo('software')" class="nav-btn text-slate-600 hover:text-slate-900 px-3 py-2 text-sm font-medium transition-colors">Software</button>
+                    <button onclick="navigateTo('biblio')" class="nav-btn text-slate-600 hover:text-slate-900 px-3 py-2 text-sm font-medium transition-colors">Bibliografia</button>
+                </div>
+                <!-- Mobile menu button placeholder (functional logic in JS) -->
+                <div class="md:hidden flex items-center">
+                    <button id="mobile-menu-btn" class="text-slate-600 hover:text-slate-900 focus:outline-none">
+                        <span class="text-2xl">≡</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-slate-200">
+            <div class="px-2 pt-2 pb-3 space-y-1">
+                <button onclick="navigateTo('home')" class="block w-full text-left px-3 py-2 text-base font-medium text-slate-700 hover:bg-slate-100">Visão Geral</button>
+                <button onclick="navigateTo('theory')" class="block w-full text-left px-3 py-2 text-base font-medium text-slate-700 hover:bg-slate-100">Fundamentação</button>
+                <button onclick="navigateTo('infra')" class="block w-full text-left px-3 py-2 text-base font-medium text-slate-700 hover:bg-slate-100">Infraestrutura</button>
+                <button onclick="navigateTo('software')" class="block w-full text-left px-3 py-2 text-base font-medium text-slate-700 hover:bg-slate-100">Software</button>
+                <button onclick="navigateTo('biblio')" class="block w-full text-left px-3 py-2 text-base font-medium text-slate-700 hover:bg-slate-100">Bibliografia</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-16">
+
+        <!-- SECTION: HERO / VISÃO GERAL -->
+        <section id="home" class="animate-fade-in">
+            <div class="text-center max-w-3xl mx-auto mb-12">
+                <h1 class="text-4xl font-extrabold text-slate-900 sm:text-5xl mb-4">
+                    Escola Soberana
+                </h1>
+                <p class="text-xl text-slate-600 leading-relaxed">
+                    Proposta de Mestrado Profissional em Informática na Educação.
+                    <br>
+                    <span class="text-blue-600 font-semibold">Infraestrutura Livre</span>, <span class="text-blue-600 font-semibold">Cultura Digital</span> e <span class="text-blue-600 font-semibold">Soberania de Dados</span>.
+                </p>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg border border-slate-100 p-8 grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800 mb-4">O Desafio</h2>
+                    <p class="text-slate-600 mb-4">
+                        Instituições de ensino enfrentam a obsolescência de hardware e a dependência de grandes corporações tecnológicas, o que resulta em "Governamentalidade Algorítmica" — onde algoritmos proprietários moldam o comportamento pedagógico.
+                    </p>
+                    <h2 class="text-2xl font-bold text-slate-800 mb-4">A Solução</h2>
+                    <p class="text-slate-600">
+                        Implementar um laboratório sustentável reutilizando computadores antigos via clusterização (LTSP), rodando software livre educativo. O objetivo é criar um <strong>protótipo funcional</strong> que promova a autonomia tecnológica.
+                    </p>
+                </div>
+                <div class="bg-slate-100 rounded-lg p-6 border-l-4 border-blue-500">
+                    <h3 class="font-bold text-slate-800 mb-2">Pilares do Projeto</h3>
+                    <ul class="space-y-3">
+                        <li class="flex items-start">
+                            <span class="flex-shrink-0 h-6 w-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-bold mr-3">1</span>
+                            <span class="text-slate-700">Reuso de Hardware (Lixo Eletrônico Zero)</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="flex-shrink-0 h-6 w-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-bold mr-3">2</span>
+                            <span class="text-slate-700">Soberania Digital & Privacidade</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="flex-shrink-0 h-6 w-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-bold mr-3">3</span>
+                            <span class="text-slate-700">Software Livre Educacional</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION: FUNDAMENTAÇÃO TEÓRICA -->
+        <section id="theory" class="scroll-mt-24">
+            <div class="mb-6">
+                <h2 class="text-3xl font-bold text-slate-900 mb-3">Fundamentação Teórica</h2>
+                <p class="text-slate-600 max-w-3xl">
+                    A base pedagógica e sociológica do projeto. Compreender como a tecnologia modula o comportamento é essencial para propor uma infraestrutura libertadora.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Concept 1 -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 card-hover">
+                    <div class="h-10 w-10 bg-indigo-100 rounded-lg flex items-center justify-center mb-4 text-indigo-600 font-bold text-lg">¶</div>
+                    <h3 class="text-lg font-bold text-slate-800 mb-2">Governamentalidade Algorítmica</h3>
+                    <p class="text-sm text-slate-600 mb-4">
+                        Conceito explorado por Antoinette Rouvroy e Thomas Berns. Refere-se a um tipo de gestão baseada em estatísticas e algoritmos que evitam o confronto político e focam na modulação de comportamentos futuros, muitas vezes ignorando o sujeito reflexivo.
+                    </p>
+                </div>
+                <!-- Concept 2 -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 card-hover">
+                    <div class="h-10 w-10 bg-teal-100 rounded-lg flex items-center justify-center mb-4 text-teal-600 font-bold text-lg">⌨</div>
+                    <h3 class="text-lg font-bold text-slate-800 mb-2">Cultura Hacker na Educação</h3>
+                    <p class="text-sm text-slate-600 mb-4">
+                        Não no sentido de invasão, mas de entender como as coisas funcionam ("abrir a caixa preta"). Promove a colaboração, o compartilhamento de conhecimento e a autonomia sobre as ferramentas utilizadas no aprendizado.
+                    </p>
+                </div>
+                <!-- Concept 3 -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 card-hover">
+                    <div class="h-10 w-10 bg-amber-100 rounded-lg flex items-center justify-center mb-4 text-amber-600 font-bold text-lg">♻</div>
+                    <h3 class="text-lg font-bold text-slate-800 mb-2">Tecnologia Convivial</h3>
+                    <p class="text-sm text-slate-600 mb-4">
+                        Inspirado em Ivan Illich. Tecnologias que aumentam a capacidade de ação do indivíduo sem gerar dependência de especialistas ou corporações. O cluster de PCs antigos devolve o controle da infraestrutura à escola.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION: INFRAESTRUTURA (INTERACTIVE DEMO) -->
+        <section id="infra" class="scroll-mt-24">
+            <div class="mb-6">
+                <h2 class="text-3xl font-bold text-slate-900 mb-3">O Protótipo: Cluster LTSP</h2>
+                <p class="text-slate-600 max-w-4xl">
+                    Utilizamos o modelo <strong>LTSP (Linux Terminal Server Project)</strong>. Computadores antigos ("Sucata") funcionam como "Thin Clients". Eles não processam nada; apenas enviam teclado/mouse e recebem imagem do servidor. O servidor processa tudo.
+                    <br><span class="text-sm italic text-slate-500">Interaja abaixo para simular o laboratório.</span>
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Interactive Diagram -->
+                <div class="lg:col-span-2 bg-slate-900 rounded-xl p-6 relative overflow-hidden min-h-[400px] flex flex-col items-center justify-center shadow-inner" id="network-container">
+                    <div class="absolute top-4 left-4 text-slate-400 text-xs font-mono">Simulador de Rede LTSP v1.0</div>
+                    
+                    <!-- Controls -->
+                    <div class="absolute bottom-4 left-4 z-20 flex space-x-2">
+                        <button id="btn-boot" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm font-bold transition">Ligar Laboratório</button>
+                        <button id="btn-stress" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm font-bold transition opacity-50 cursor-not-allowed" disabled>Executar Blender</button>
+                    </div>
+
+                    <!-- Server -->
+                    <div class="absolute top-10 left-1/2 transform -translate-x-1/2 flex flex-col items-center z-10">
+                        <div class="server-node shadow-[0_0_20px_rgba(59,130,246,0.6)]">SRV</div>
+                        <div class="text-blue-300 text-xs font-mono mt-2">Servidor (i7/Ryzen + 32GB)</div>
+                    </div>
+
+                    <!-- Clients Container -->
+                    <div class="absolute bottom-20 w-full flex justify-around px-8" id="client-row">
+                        <!-- Clients injected by JS -->
+                    </div>
+                    
+                    <!-- Status Log -->
+                    <div id="console-log" class="absolute top-4 right-4 w-48 h-32 bg-black/50 text-green-400 text-[10px] font-mono p-2 rounded overflow-hidden border border-slate-700">
+                        > Sistema aguardando...<br>
+                    </div>
+                </div>
+
+                <!-- Info Panel -->
+                <div class="space-y-6">
+                    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                        <h3 class="font-bold text-slate-800 mb-2">Especificações do Protótipo</h3>
+                        <div class="space-y-4 text-sm text-slate-600">
+                            <div>
+                                <span class="block font-semibold text-slate-900">Servidor (1un):</span>
+                                Processador moderno (Ryzen 5 ou i7), 32GB RAM, SSD NVMe. Roda todas as sessões.
+                            </div>
+                            <div>
+                                <span class="block font-semibold text-slate-900">Terminais (15-30un):</span>
+                                Qualquer PC antigo (Pentium 4, Core 2 Duo), 1GB RAM, Sem HD. Boot via Rede (PXE).
+                            </div>
+                            <div>
+                                <span class="block font-semibold text-slate-900">Rede:</span>
+                                Switch Gigabit é essencial para evitar gargalos na transmissão de vídeo.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chart Container -->
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+                        <h3 class="font-bold text-slate-800 mb-2 text-sm">Comparativo de Custo (Laboratório 20 PCs)</h3>
+                        <div class="chart-container flex-grow">
+                            <canvas id="costChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION: DOCUMENTAÇÃO DE SOFTWARES -->
+        <section id="software" class="scroll-mt-24">
+            <div class="mb-6">
+                <h2 class="text-3xl font-bold text-slate-900 mb-3">Stack Tecnológico</h2>
+                <p class="text-slate-600 max-w-3xl">
+                    A "alma" da Escola Soberana. Softwares livres que permitem a gestão centralizada e a aplicação pedagógica.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Tool 1 -->
+                <div class="border border-slate-200 rounded-lg p-5 bg-white hover:border-blue-400 transition-colors">
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="text-xl font-bold text-slate-800">LTSP (Linux Terminal Server Project)</h3>
+                        <span class="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">Infraestrutura</span>
+                    </div>
+                    <p class="text-sm text-slate-600 mb-4">
+                        Permite que muitos computadores "magros" (thin clients) utilizem um único servidor. Aplicações rodam no servidor, mas são exibidas nos clientes.
+                    </p>
+                    <div class="bg-slate-50 p-3 rounded text-xs font-mono text-slate-700">
+                        $ apt install ltsp-server<br>
+                        $ ltsp image /<br>
+                        $ ltsp ipxe
+                    </div>
+                    <a href="https://ltsp.org/" target="_blank" class="text-blue-600 text-sm font-medium hover:underline mt-3 block">Documentação Oficial &rarr;</a>
+                </div>
+
+                <!-- Tool 2 -->
+                <div class="border border-slate-200 rounded-lg p-5 bg-white hover:border-blue-400 transition-colors">
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="text-xl font-bold text-slate-800">Epoptes</h3>
+                        <span class="bg-purple-100 text-purple-800 text-xs font-semibold px-2.5 py-0.5 rounded">Gestão</span>
+                    </div>
+                    <p class="text-sm text-slate-600 mb-4">
+                        Software de gerenciamento de laboratório. Permite ao professor ver as telas dos alunos, bloquear, enviar mensagens e executar comandos em lote.
+                    </p>
+                    <ul class="text-sm text-slate-600 list-disc list-inside mb-2">
+                        <li>Monitoramento em tempo real</li>
+                        <li>Wake-on-LAN (Ligar PCs remotamente)</li>
+                        <li>Broadcasting (Mostrar tela do prof.)</li>
+                    </ul>
+                    <a href="https://epoptes.org/" target="_blank" class="text-blue-600 text-sm font-medium hover:underline mt-2 block">Documentação Oficial &rarr;</a>
+                </div>
+
+                <!-- Tool 3 -->
+                <div class="border border-slate-200 rounded-lg p-5 bg-white hover:border-blue-400 transition-colors">
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="text-xl font-bold text-slate-800">Debian Edu / Skolelinux</h3>
+                        <span class="bg-red-100 text-red-800 text-xs font-semibold px-2.5 py-0.5 rounded">Sistema Operacional</span>
+                    </div>
+                    <p class="text-sm text-slate-600 mb-4">
+                        Uma distribuição Linux baseada em Debian, pré-configurada para escolas. Já vem com LTSP configurado, servidor LDAP (usuários), Moodle e ferramentas educacionais.
+                    </p>
+                    <a href="https://wiki.debian.org/DebianEdu" target="_blank" class="text-blue-600 text-sm font-medium hover:underline mt-2 block">Wiki do Projeto &rarr;</a>
+                </div>
+
+                <!-- Tool 4 -->
+                <div class="border border-slate-200 rounded-lg p-5 bg-white hover:border-blue-400 transition-colors">
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="text-xl font-bold text-slate-800">i-Educar</h3>
+                        <span class="bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded">Gestão Escolar</span>
+                    </div>
+                    <p class="text-sm text-slate-600 mb-4">
+                        Software livre brasileiro para gestão escolar (matrículas, notas, frequência). Essencial para a soberania dos dados administrativos da escola.
+                    </p>
+                    <a href="https://ieducar.org/" target="_blank" class="text-blue-600 text-sm font-medium hover:underline mt-2 block">Portal i-Educar &rarr;</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION: BIBLIOGRAFIA -->
+        <section id="biblio" class="bg-white rounded-xl shadow-sm border border-slate-200 p-8 scroll-mt-24">
+            <h2 class="text-2xl font-bold text-slate-900 mb-6">Referências Bibliográficas Selecionadas</h2>
+            
+            <div class="flex flex-col md:flex-row justify-between mb-6 gap-4">
+                <input type="text" id="searchBiblio" placeholder="Filtrar por autor ou tema..." class="w-full md:w-1/2 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                <div class="flex space-x-2">
+                    <button class="filter-btn active px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-sm hover:bg-slate-200" data-filter="all">Todos</button>
+                    <button class="filter-btn px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-sm hover:bg-slate-200" data-filter="Infra">Infraestrutura</button>
+                    <button class="filter-btn px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-sm hover:bg-slate-200" data-filter="Teoria">Teoria Crítica</button>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-slate-200">
+                    <thead class="bg-slate-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Autor / Ano</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Título</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Tópico</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-slate-200" id="biblioTable">
+                        <!-- JS populated -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-slate-900 text-slate-400 py-12 mt-16">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <p class="mb-2">Mestrado Profissional em Informática na Educação</p>
+            <p class="text-sm">Protótipo "Escola Soberana" &copy; 2024</p>
+        </div>
+    </footer>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // --- DATA STORAGE ---
+        const references = [
+            { author: "ROUVROY, A.; BERNS, T.", year: "2013", title: "Governamentalidade algorítmica e perspectivas de emancipação", type: "Teoria" },
+            { author: "PARRA, H. Z. M.", year: "2012", title: "Ciência cidadã: modos de participação e ativismo informacional", type: "Teoria" },
+            { author: "FOUCAULT, M.", year: "2008", title: "Nascimento da biopolítica", type: "Teoria" },
+            { author: "LTSP Project", year: "2024", title: "Linux Terminal Server Project Documentation", type: "Infra" },
+            { author: "PRETTO, N. L.", year: "2017", title: "O grande 'software' educativo e a educação", type: "Teoria" },
+            { author: "AMADEU, S.", year: "2019", title: "Tudo sobre tod@s: redes digitais, privacidade e venda de dados pessoais", type: "Teoria" },
+            { author: "Debian Edu", year: "2023", title: "Debian Edu / Skolelinux Handbook", type: "Infra" }
+        ];
+
+        // --- NAVIGATION LOGIC ---
+        function navigateTo(sectionId) {
+            const element = document.getElementById(sectionId);
+            if(element) {
+                element.scrollIntoView({ behavior: 'smooth' });
+                // Update active state
+                document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('nav-active'));
+                const activeBtn = Array.from(document.querySelectorAll('.nav-btn')).find(btn => btn.getAttribute('onclick').includes(sectionId));
+                if(activeBtn) activeBtn.classList.add('nav-active');
+            }
+            // Close mobile menu if open
+            const menu = document.getElementById('mobile-menu');
+            if(!menu.classList.contains('hidden')) {
+                menu.classList.add('hidden');
+            }
+        }
+
+        document.getElementById('mobile-menu-btn').addEventListener('click', () => {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        });
+
+        // --- INFRASTRUCTURE SIMULATION LOGIC ---
+        const networkContainer = document.getElementById('network-container');
+        const clientRow = document.getElementById('client-row');
+        const consoleLog = document.getElementById('console-log');
+        let isLabOn = false;
+
+        // Initialize Clients
+        const clientCount = 5;
+        for (let i = 0; i < clientCount; i++) {
+            const node = document.createElement('div');
+            node.className = 'network-node client-node flex flex-col items-center justify-center relative';
+            node.innerHTML = `<span>PC ${i+1}</span><div class="text-[9px] mt-8 text-slate-400 opacity-0 transition-opacity status-text absolute w-20 text-center">OFFLINE</div>`;
+            node.id = `client-${i}`;
+            clientRow.appendChild(node);
+        }
+
+        function log(msg) {
+            consoleLog.innerHTML += `> ${msg}<br>`;
+            consoleLog.scrollTop = consoleLog.scrollHeight;
+        }
+
+        function sendPacket(fromX, fromY, toX, toY, callback) {
+            const packet = document.createElement('div');
+            packet.className = 'packet';
+            networkContainer.appendChild(packet);
+            
+            // Initial position (relative to container)
+            packet.style.left = fromX + 'px';
+            packet.style.top = fromY + 'px';
+            packet.style.opacity = 1;
+            packet.style.transition = 'all 1s linear';
+
+            // Force reflow
+            packet.getBoundingClientRect();
+
+            // Move
+            setTimeout(() => {
+                packet.style.left = toX + 'px';
+                packet.style.top = toY + 'px';
+            }, 50);
+
+            // Cleanup
+            setTimeout(() => {
+                packet.remove();
+                if(callback) callback();
+            }, 1050);
+        }
+
+        document.getElementById('btn-boot').addEventListener('click', () => {
+            if(isLabOn) return;
+            isLabOn = true;
+            log("Iniciando servidor LTSP...");
+            document.querySelector('.server-node').style.boxShadow = "0 0 30px #3b82f6";
+            
+            // Animate Boot
+            const server = document.querySelector('.server-node');
+            const serverRect = server.getBoundingClientRect();
+            const containerRect = networkContainer.getBoundingClientRect();
+            const sX = serverRect.left - containerRect.left + 30;
+            const sY = serverRect.top - containerRect.top + 30;
+
+            const clients = document.querySelectorAll('.client-node');
+            
+            clients.forEach((client, index) => {
+                setTimeout(() => {
+                    const cRect = client.getBoundingClientRect();
+                    const cX = cRect.left - containerRect.left + 20;
+                    const cY = cRect.top - containerRect.top + 20;
+
+                    log(`Enviando imagem de boot para PC ${index+1}...`);
+                    
+                    // Packet from Server to Client
+                    sendPacket(sX, sY, cX, cY, () => {
+                        client.classList.add('client-active');
+                        client.querySelector('.status-text').innerText = "LDM Login";
+                        client.querySelector('.status-text').style.opacity = 1;
+                        if(index === clients.length - 1) {
+                            log("Laboratório Operacional.");
+                            document.getElementById('btn-stress').disabled = false;
+                            document.getElementById('btn-stress').classList.remove('opacity-50', 'cursor-not-allowed');
+                            document.getElementById('btn-boot').innerText = "Laboratório Online";
+                        }
+                    });
+
+                }, index * 600);
+            });
+        });
+
+        document.getElementById('btn-stress').addEventListener('click', () => {
+            if(!isLabOn) return;
+            log("Iniciando Blender em todos os nós...");
+            
+            const server = document.querySelector('.server-node');
+            server.classList.add('animate-pulse'); // Server works hard
+
+            document.querySelectorAll('.client-node').forEach(client => {
+                client.style.borderColor = "#eab308"; // Processing color
+                client.querySelector('.status-text').innerText = "Renderizando...";
+                client.querySelector('.status-text').style.color = "#eab308";
+            });
+
+            setTimeout(() => {
+                log("Tarefa concluída. CPU Server: 85%");
+                server.classList.remove('animate-pulse');
+                document.querySelectorAll('.client-node').forEach(client => {
+                    client.style.borderColor = "#15803d"; // Back to green
+                    client.querySelector('.status-text').innerText = "Idle";
+                    client.querySelector('.status-text').style.color = "#94a3b8";
+                });
+            }, 3000);
+        });
+
+        // --- CHART.JS IMPLEMENTATION ---
+        document.addEventListener('DOMContentLoaded', function() {
+            const ctx = document.getElementById('costChart').getContext('2d');
+            
+            // Data comparison: Buying 20 new PCs vs Buying 1 Server + reusing 20 old PCs
+            const chartData = {
+                labels: ['Investimento Inicial (R$)', 'Manutenção Anual (R$)', 'Consumo Energia (Watts)'],
+                datasets: [
+                    {
+                        label: 'Modelo Proprietário (20 PCs Novos)',
+                        data: [
+                            60000, // 20 * 3000
+                            4000,  // Licenses + Hardware fixes
+                            6000   // 300w * 20
+                        ],
+                        backgroundColor: 'rgba(239, 68, 68, 0.6)', // Red
+                        borderColor: 'rgba(239, 68, 68, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Modelo Escola Soberana (1 Servidor + Sucata)',
+                        data: [
+                            8000,  // 1 Good server
+                            500,   // Occasional parts
+                            2500   // 500w server + 100w * 20 (older pcs idle low or monitors only)
+                        ],
+                        backgroundColor: 'rgba(34, 197, 94, 0.6)', // Green
+                        borderColor: 'rgba(34, 197, 94, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            };
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: chartData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        // Simple formatting for Reais or Watts
+                                        label += context.parsed.y > 5000 ? 'R$ ' + context.parsed.y : context.parsed.y + ' W'; 
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // --- BIBLIOGRAPHY LOGIC ---
+            const bibTable = document.getElementById('biblioTable');
+            const searchInput = document.getElementById('searchBiblio');
+            const filterBtns = document.querySelectorAll('.filter-btn');
+            let currentFilter = 'all';
+
+            function renderBiblio() {
+                const query = searchInput.value.toLowerCase();
+                bibTable.innerHTML = '';
+
+                references.forEach(ref => {
+                    const matchesSearch = ref.title.toLowerCase().includes(query) || ref.author.toLowerCase().includes(query);
+                    const matchesFilter = currentFilter === 'all' || ref.type === currentFilter;
+
+                    if (matchesSearch && matchesFilter) {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">${ref.author} (${ref.year})</td>
+                            <td class="px-6 py-4 text-sm text-slate-600 break-words">${ref.title}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${ref.type === 'Infra' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'}">
+                                    ${ref.type}
+                                </span>
+                            </td>
+                        `;
+                        bibTable.appendChild(row);
+                    }
+                });
+            }
+
+            // Events for Biblio
+            searchInput.addEventListener('input', renderBiblio);
+
+            filterBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    // UI toggle
+                    filterBtns.forEach(b => {
+                        b.classList.remove('bg-blue-100', 'text-blue-800');
+                        b.classList.add('bg-slate-100', 'text-slate-700');
+                    });
+                    e.target.classList.remove('bg-slate-100', 'text-slate-700');
+                    e.target.classList.add('bg-blue-100', 'text-blue-800');
+                    
+                    currentFilter = e.target.getAttribute('data-filter');
+                    renderBiblio();
+                });
+            });
+
+            // Initial Render
+            renderBiblio();
+            // Highlight first filter btn
+            filterBtns[0].click();
+        });
+    </script>
+</body>
+</html>
