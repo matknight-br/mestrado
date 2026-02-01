@@ -205,7 +205,7 @@
     <script>
         // --- ÁUDIO (Web Audio API) ---
 		const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
+		
 		const SoundFX = {
 			// Aumentei o volume padrão (v) de 0.1 para 0.5
 			playTone: (f, t, d, v=0.9) => { 
@@ -309,6 +309,8 @@
 
         // --- LÓGICA ---
         let queue = [], curr = 0, tips = 1, rems = 1, timer = 20, interval, active = false, currQ;
+		let correctCount = 0;
+		let wrongCount = 0;		
 
         function startGame() {
 		    if(audioCtx.state==='suspended') audioCtx.resume();
@@ -317,15 +319,21 @@
 		    document.getElementById('end-screen').classList.add('hidden');
 		    document.getElementById('game-container').classList.remove('hidden');
 		    
-		    // Montagem da fila: Seleciona 3 perguntas de cada década de forma aleatória
+		    // Montagem da fila
 		    queue = [];
 		    [1980,1990,2000,2010,2020].forEach(d => {
-		        let p = questionPool.filter(q=>q.decade===d); // Pega todas da década
-		        let shuffled = shuffle([...p]); // Embaralha usando Fisher-Yates
-		        queue.push(...shuffled.slice(0,3)); // Pega as 3 primeiras
+		        let p = questionPool.filter(q=>q.decade===d);
+		        let shuffled = shuffle([...p]);
+		        queue.push(...shuffled.slice(0,3));
 		    });
 		    
-		    curr = 0; tips = 1; rems = 1;
+		    // ZERAR TODOS OS CONTADORES AQUI
+		    curr = 0; 
+		    tips = 2; 
+		    rems = 2;
+		    correctCount = 0; // Novo
+		    wrongCount = 0;   // Novo
+		    
 		    document.getElementById('q-total').innerText = queue.length;
 		    updateHelp();
 		    setTimeout(loadQ, 1000);
@@ -361,60 +369,121 @@
         }
 
         function checkAnswer(idx) {
-            clearInterval(interval);
-            let correct = currQ.correct;
-            let isCorrect = (idx === correct);
-            [0,1,2,3].forEach(i=>document.getElementById(`opt${i}`).disabled=true);
-
-            if(idx !== -1) {
-                let btn = document.getElementById(`opt${idx}`);
-                if(isCorrect) { btn.style.background="var(--if-green)"; SoundFX.playCorrect(); }
-                else { btn.style.background="var(--if-red)"; SoundFX.playWrong(); }
-            } else SoundFX.playWrong();
-
-            document.getElementById(`opt${correct}`).style.background = "var(--if-green)";
-            
-            setTimeout(()=>{
-                document.getElementById('feedback-title').innerText = isCorrect ? "Correto!" : "Incorreto!";
-                document.getElementById('feedback-title').style.color = isCorrect ? "var(--if-green)" : "var(--if-red)";
-                document.getElementById('feedback-summary').innerText = currQ.summary;
-                document.getElementById('feedback-critique').innerText = currQ.critique;
-                document.getElementById('overlay-feedback').style.display='block';
-                
-                // Salva estado para botão continuar
-                document.getElementById('overlay-feedback').onclick = (e) => {
-                   if(e.target.tagName !== 'BUTTON') return;
-                   document.getElementById('overlay-feedback').style.display='none';
-                   if(isCorrect) {
-                       curr++;
-                       if(curr < queue.length) loadQ();
-                       else victory();
-                   } else gameOver();
-                };
-            }, 1000);
-        }
+		    clearInterval(interval);
+		    let correct = currQ.correct;
+		    let isCorrect = (idx === correct);
+		    
+		    // Trava botões
+		    [0,1,2,3].forEach(i=>document.getElementById(`opt${i}`).disabled=true);
+		
+		    if(idx !== -1) {
+		        let btn = document.getElementById(`opt${idx}`);
+		        if(isCorrect) {
+		            btn.style.background="var(--if-green)";
+		            SoundFX.playCorrect();
+		            correctCount++; // Conta acerto
+		        } else {
+		            btn.style.background="var(--if-red)";
+		            SoundFX.playWrong();
+		            wrongCount++; // Conta erro
+		        }
+		    } else {
+		        SoundFX.playWrong();
+		        wrongCount++; // Conta erro por tempo
+		    }
+		
+		    // Mostra a correta
+		    document.getElementById(`opt${correct}`).style.background = "var(--if-green)";
+		    
+		    // Feedback Modal
+		    setTimeout(()=>{
+		        document.getElementById('feedback-title').innerText = isCorrect ? "Correto!" : "Incorreto!";
+		        document.getElementById('feedback-title').style.color = isCorrect ? "var(--if-green)" : "var(--if-red)";
+		        document.getElementById('feedback-summary').innerText = currQ.summary;
+		        document.getElementById('feedback-critique').innerText = currQ.critique;
+		        document.getElementById('overlay-feedback').style.display='block';
+		        
+		        // LÓGICA ALTERADA: Sempre avança para próxima ou finaliza com nota
+		        document.getElementById('overlay-feedback').onclick = (e) => {
+		           if(e.target.tagName !== 'BUTTON') return;
+		           document.getElementById('overlay-feedback').style.display='none';
+		           
+		           curr++;
+		           if(curr < queue.length) {
+		               loadQ();
+		           } else {
+		               finishGame(); // Chama a nova função de nota final
+		           }
+		        };
+		    }, 1000);
+		}
 
         function closeFeedbackModal() { /* Gerido no onclick acima para passar state */ }
 
-        function gameOver() {
-            active = false;
-            document.getElementById('game-container').classList.add('hidden');
-            document.getElementById('end-screen').classList.remove('hidden');
-            document.getElementById('end-title').innerText = "FIM DE JOGO";
-            document.getElementById('end-title').style.color = "var(--if-red)";
-            document.getElementById('end-msg').innerText = `Parou na questão ${curr+1}.`;
-        }
-
-        function victory() {
-            active = false;
-            document.getElementById('game-container').classList.add('hidden');
-            document.getElementById('end-screen').classList.remove('hidden');
-            document.getElementById('end-title').innerText = "PARABÉNS!";
-            document.getElementById('end-title').style.color = "var(--accent-gold)";
-            document.getElementById('end-msg').innerText = "Você completou a jornada!";
-            SoundFX.playVictory();
-        }
-
+		function finishGame() {
+		    active = false;
+		    document.getElementById('game-container').classList.add('hidden');
+		    document.getElementById('end-screen').classList.remove('hidden');
+		
+		    // Cálculos da Nota
+		    const total = queue.length;
+		    const percentage = Math.round((correctCount / total) * 100);
+		    const grade = (percentage / 10).toFixed(1); // Nota de 0 a 10
+		
+		    // Definição de Mensagem, Cor e Imagem baseada no resultado
+		    let msg = "";
+		    let color = "";
+		    let imgUrl = ""; // Variável para a imagem
+		    
+		    if(percentage >= 90) {
+		        // EXCELÊNCIA
+		        msg = "Excelência Acadêmica!";
+		        color = "var(--if-green)";
+		        SoundFX.playVictory();
+		        // Exemplo: Troféu de Ouro
+		        imgUrl = "excelente.png"; 
+		    } else if(percentage >= 60) {
+		        // APROVADO
+		        msg = "Aprovado!";
+		        color = "var(--accent-gold)";
+		        SoundFX.playVictory();
+		        // Exemplo: Ícone de Sucesso/Check
+		        imgUrl = "trofeu-joinha.png"; 
+		    } else {
+		        // REPROVADO
+		        msg = "Reprovado! Estude mais um pouquinho.";
+		        color = "var(--if-red)";
+		        SoundFX.playWrong();
+		        // Exemplo: Ícone de Livros/Estudo
+		        imgUrl = "reprovado.png"; 
+		    }
+		
+		    // Atualiza o Título
+		    document.getElementById('end-title').innerText = msg;
+		    document.getElementById('end-title').style.color = color;
+		    
+		    // Injeta o HTML com a Imagem e os Detalhes
+		    document.getElementById('end-msg').innerHTML = `
+		        <div style="background: rgba(0,0,0,0.3); padding: 25px; border-radius: 15px; margin-top: 10px; display: flex; flex-direction: column; align-items: center;">
+		            
+		            <!-- Imagem do Resultado -->
+		            <img src="${imgUrl}" alt="Resultado" style="width: 120px; height: 120px; margin-bottom: 15px; filter: drop-shadow(0 0 10px ${color}); transition: transform 0.5s;">
+		            
+		            <div style="width: 100%; display: flex; justify-content: space-around; margin-bottom: 10px;">
+		                <p style="font-size: 1.1rem; margin: 0;">✅ Acertos: <span style="color:var(--if-green); font-weight:bold;">${correctCount}</span></p>
+		                <p style="font-size: 1.1rem; margin: 0;">❌ Erros: <span style="color:var(--if-red); font-weight:bold;">${wrongCount}</span></p>
+		            </div>
+		            
+		            <hr style="border-color: #555; width: 100%; margin: 10px 0;">
+		            
+		            <div style="font-size: 4.5rem; font-weight: bold; color: ${color}; text-shadow: 0 0 25px rgba(0,0,0,0.6); line-height: 1;">
+		                ${grade}
+		            </div>
+		            <p style="font-size: 0.9rem; color: #aaa; margin-top: 5px; text-transform: uppercase; letter-spacing: 1px;">Nota Final</p>
+		        </div>
+		    `;
+		}
+		
         function updateHelp() {
             document.getElementById('btn-tip').innerText=`💡 Dica (${tips})`;
             document.getElementById('btn-tip').disabled = (tips===0);
@@ -447,5 +516,6 @@
     </script>
 </body>
 </html>
+
 
 
