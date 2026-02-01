@@ -235,67 +235,102 @@
 			playVictory: () => [523,659,783,1046].forEach((f,i)=>setTimeout(()=>SoundFX.playTone(f,'square',0.4, 0.9), i*200))
 		};
 
+		function shuffle(array) {
+		    for (let i = array.length - 1; i > 0; i--) {
+		        const j = Math.floor(Math.random() * (i + 1));
+		        [array[i], array[j]] = [array[j], array[i]];
+		    }
+		    return array;
+		}
+
+
         // --- QUESTÕES ---
         const questionPool = [
-            // 1980
-            { decade: 1980, correct: 1, question: "Em 1983, qual foi o primeiro projeto piloto de informática educativa lançado pelo governo?", options: ["ProInfo", "Projeto EDUCOM", "UCA", "Educação Conectada"], tip: "Envolveu universidades e a SEI.", summary: "O Projeto EDUCOM instalou centros pilotos em universidades federais.", critique: "Ficou restrito às universidades, demorando a impactar a escola básica." },
-            { decade: 1980, correct: 1, question: "Qual linguagem predominou nos anos 80, famosa pela 'tartaruga'?", options: ["Java", "Logo", "Python", "Basic"], tip: "Criada por Seymour Papert.", summary: "O Logo permitia aprender geometria e lógica comandando uma tartaruga.", critique: "Muitas escolas usaram a ferramenta de forma mecânica, ignorando o construcionismo." },
-            { decade: 1980, correct: 2, question: "Como a 'Reserva de Mercado' (1984) impactou a educação?", options: ["Barateou PCs", "Inundou de importados", "Encareceu equipamentos", "Criou a internet"], tip: "Proibia importações.", summary: "Para proteger a indústria nacional, o Brasil proibiu importações, gerando PCs caros.", critique: "Atrasou a alfabetização digital de uma geração devido aos custos proibitivos." },
-            { decade: 1980, correct: 0, question: "O que eram os CIEDs criados no fim dos anos 80?", options: ["Centros estaduais descentralizados", "Lojas", "Escolas privadas", "Fábricas"], tip: "Tentativa de descentralização.", summary: "Visavam capacitar equipes estaduais com base na experiência universitária.", critique: "A descontinuidade política fechou muitos centros a cada troca de governo." },
-            { decade: 1980, correct: 0, question: "Qual teórico influenciou o uso do computador como ferramenta de construção?", options: ["Seymour Papert", "Skinner", "Pavlov", "Montessori"], tip: "Autor de 'A Máquina das Crianças'.", summary: "Defendia que a criança ensinasse o computador (construcionismo).", critique: "Sua visão chocou-se com a rigidez do sistema escolar tradicional." },
-            
-            // 1990
-            { decade: 1990, correct: 1, question: "Em 1997, o MEC lançou o ProInfo. Qual era sua estrutura local?", options: ["Lan Houses", "NTEs", "Cinemas", "Shoppings"], tip: "Núcleos de Tecnologia.", summary: "O ProInfo criou os NTEs para capacitar professores da rede pública.", critique: "Muitos NTEs foram sucateados ou perderam o foco pedagógico com o tempo." },
-            { decade: 1990, correct: 1, question: "O Programa TV Escola (1995) usava qual tecnologia?", options: ["Fibra ótica", "TV e Fitas VHS", "VR", "Tablets"], tip: "Via satélite.", summary: "Distribuía kits com TV, vídeo e parabólica para formação docente.", critique: "O vídeo virou 'tapa-buraco' de aula vaga, sem integração curricular." },
-            { decade: 1990, correct: 1, question: "O que os PCNs (1998) disseram sobre tecnologia?", options: ["Proibiram", "Tema Transversal", "Disciplina isolada", "Apenas no ensino médio"], tip: "Diretrizes curriculares.", summary: "Sugeriram que TICs deveriam perpassar todas as disciplinas.", critique: "Sem formação prática, professores de outras áreas continuaram sem usar o laboratório." },
-            { decade: 1990, correct: 1, question: "A Internet comercial nos anos 90 mudou o foco para:", options: ["Programação", "Pesquisa e Comunicação", "Robótica", "Datilografia"], tip: "Janela para o mundo.", summary: "Deslocou o foco do 'programar' para o 'navegar e pesquisar'.", critique: "A pesquisa virou 'Ctrl+C Ctrl+V', sem curadoria crítica da informação?" },
-            { decade: 1990, correct: 1, question: "Principal obstáculo da internet nas escolas nos anos 90?", options: ["Desinteresse", "Conexão discada cara", "Censura", "Excesso de velocidade"], tip: "Ocupava o telefone.", summary: "A internet discada era lenta e inviabilizava o uso coletivo.", critique: "A infraestrutura de telecom era um gargalo para a inclusão digital." },
-
-            // 2000
-            { decade: 2000, correct: 1, question: "O projeto UCA visava qual modelo?", options: ["Laboratório", "1:1 (Um por aluno)", "Desktop", "Lousa"], tip: "Laptop individual.", summary: "Distribuiu laptops (Classmate) para alunos, inspirado no OLPC.", critique: "Falhou por falta de infraestrutura elétrica, rede e manutenção nas escolas." },
-            { decade: 2000, correct: 1, question: "Qual sistema operacional o governo incentivou nos anos 2000?", options: ["Windows", "Linux Educacional", "MacOS", "Android"], tip: "Software Livre.", summary: "O MEC criou sua distro Linux para economizar licenças.", critique: "Houve resistência cultural; muitos formatavam para instalar Windows pirata." },
-            { decade: 2000, correct: 1, question: "O Portal do Professor (2008) incentivava:", options: ["Vendas", "Troca de recursos/aulas", "Ponto eletrônico", "Vigilância"], tip: "Colaboração.", summary: "Repositório para postar aulas e baixar objetos digitais.", critique: "Falta de tempo e cultura de compartilhamento limitaram o uso." },
-            { decade: 2000, correct: 1, question: "O Programa Banda Larga nas Escolas (2008) foi acordo com:", options: ["NASA", "Teles/Operadoras", "Exército", "Google"], tip: "Troca de metas.", summary: "Governo trocou metas de telefonia por internet nas escolas.", critique: "A velocidade entregue (2Mbps) era inútil para centenas de alunos simultâneos." },
-            { decade: 2000, correct: 1, question: "Objetivo dos Telecentros Comunitários:", options: ["Jogos", "Inclusão digital da comunidade", "Venda", "Inglês"], tip: "Acesso público.", summary: "Levavam internet para áreas carentes.", critique: "Muitos viraram 'lan houses de jogos' sem mediação pedagógica." },
-
-            // 2010
-            { decade: 2010, correct: 1, question: "O que aconteceu com os tablets comprados em 2012?", options: ["Sucesso total", "Ficaram guardados/sem uso", "Foram roubados", "Substituíram livros"], tip: "Sem Wi-Fi.", summary: "Escolas receberam tablets sem ter Wi-Fi ou apps instalados.", critique: "Exemplo de tecnicismo: jogar hardware sem planejamento pedagógico." },
-            { decade: 2010, correct: 1, question: "A BNCC (2017) definiu 'Cultura Digital' como:", options: ["Eletiva", "Competência Geral Obrigatória", "Proibida", "Técnica"], tip: "Competência 5.", summary: "Direito de aprendizagem de todo aluno brasileiro.", critique: "Como cobrar isso em escolas sem saneamento ou eletricidade?" },
-            { decade: 2010, correct: 0, question: "A Educação Conectada (2017) inovou ao:", options: ["Repassar verba para escola contratar net", "Centralizar", "Usar satélite", "Proibir net"], tip: "Autonomia.", summary: "Enviava verba (PDDE) para diretora contratar fibra local.", critique: "Não resolve em áreas rurais onde não há provedor para contratar." },
-            { decade: 2010, correct: 1, question: "O que são REA?", options: ["Softwares", "Recursos Educacionais Abertos", "Livros caros", "Vírus"], tip: "Licença aberta.", summary: "Materiais que podem ser adaptados e compartilhados legalmente.", critique: "A cultura de direitos autorais fechados ainda barra sua disseminação." },
-            { decade: 2010, correct: 1, question: "Tendência 'BYOD' significa:", options: ["Proibir celular", "Traga seu próprio dispositivo", "Governo dá tudo", "Laboratório"], tip: "Uso do celular do aluno.", summary: "Permitir uso do smartphone do aluno em aula.", critique: "Gera exclusão: quem tem celular ruim ou sem dados fica de fora." },
-
-            // 2020
-            { decade: 2020, correct: 1, question: "A pandemia (2020) escancarou:", options: ["Excesso de tech", "O Fosso Digital", "Facilidade do EAD", "Inutilidade do PC"], tip: "Desigualdade.", summary: "Alunos pobres ficaram sem acesso enquanto ricos seguiam online.", critique: "Internet foi reconhecida tardiamente como direito essencial." },
-            { decade: 2020, correct: 1, question: "A Lei 14.533 (PNED) propõe:", options: ["Apenas Word", "Letramento e Computação", "Venda de dados", "Fim da escola"], tip: "Lei de 2023.", summary: "Ensino de computação como conhecimento fundamental.", critique: "Quem dará essas aulas? Faltam professores licenciados." },
-            { decade: 2020, correct: 1, question: "Risco da 'Plataformização' da educação:", options: ["Madeira", "Dependência de Big Techs/Dados", "Petróleo", "Jogos"], tip: "Privacidade.", summary: "Redes públicas dependentes de Google/Microsoft.", critique: "Estamos criando uma dependência colonial digital e entregando dados?" },
-            { decade: 2020, correct: 1, question: "Debate sobre IA Generativa (ChatGPT) em 2023:", options: ["Conserto", "Plágio vs Autoria", "Eletricidade", "Salários"], tip: "Redação.", summary: "IA forçou repensar a avaliação e o 'dever de casa'.", critique: "Como ensinar a pensar COM a IA sem terceirizar o raciocínio?" },
-            { decade: 2020, correct: 1, question: "LGPD nas escolas exige:", options: ["Proibir chamada", "Proteção de dados de menores", "Facebook", "Fotos"], tip: "Lei de Dados.", summary: "Escolas são responsáveis por proteger dados dos alunos.", critique: "Maioria das escolas não tem segurança cibernética adequada." }
-        ];
+	    // --- 1980 (10 Questões) ---
+	    { decade: 1980, correct: 1, question: "Em 1983, qual foi o primeiro projeto piloto de informática educativa lançado pelo governo?", options: ["ProInfo", "Projeto EDUCOM", "UCA", "Educação Conectada"], tip: "Envolveu universidades e a SEI.", summary: "O Projeto EDUCOM instalou centros pilotos em universidades federais.", critique: "Ficou restrito às universidades, demorando a impactar a escola básica." },
+	    { decade: 1980, correct: 1, question: "Qual linguagem predominou nos anos 80, famosa pela 'tartaruga'?", options: ["Java", "Logo", "Python", "Basic"], tip: "Criada por Seymour Papert.", summary: "O Logo permitia aprender geometria e lógica comandando uma tartaruga.", critique: "Muitas escolas usaram a ferramenta de forma mecânica, ignorando o construcionismo." },
+	    { decade: 1980, correct: 2, question: "Como a 'Reserva de Mercado' (1984) impactou a educação?", options: ["Barateou PCs", "Inundou de importados", "Encareceu equipamentos", "Criou a internet"], tip: "Proibia importações.", summary: "O Brasil proibiu importações para proteger a indústria nacional.", critique: "Atrasou a alfabetização digital devido aos custos proibitivos." },
+	    { decade: 1980, correct: 0, question: "O que eram os CIEDs criados no fim dos anos 80?", options: ["Centros estaduais", "Lojas", "Escolas privadas", "Fábricas"], tip: "Descentralização.", summary: "Visavam capacitar equipes estaduais com base na experiência universitária.", critique: "Descontinuidade política fechou muitos centros." },
+	    { decade: 1980, correct: 0, question: "Qual teórico influenciou o uso do computador como ferramenta de construção?", options: ["Seymour Papert", "Skinner", "Pavlov", "Montessori"], tip: "Autor de 'A Máquina das Crianças'.", summary: "Defendia que a criança ensinasse o computador.", critique: "Sua visão chocou-se com a rigidez do sistema escolar." },
+	    { decade: 1980, correct: 1, question: "O projeto 'Formar' (1987) focava em:", options: ["Hardware", "Formação de Professores", "Internet", "Games"], tip: "Recursos Humanos.", summary: "Primeiro curso de especialização em informática educativa.", critique: "Formou poucos especialistas, não atingindo a massa de professores." },
+	    { decade: 1980, correct: 2, question: "Nos anos 80, o computador na escola era visto como:", options: ["Eletrodoméstico", "Brinquedo", "Objeto de estudo", "Televisão"], tip: "Foco técnico.", summary: "Aprendia-se 'sobre' o computador, não 'com' ele.", critique: "Faltava integração com as outras disciplinas do currículo." },
+	    { decade: 1980, correct: 0, question: "Qual órgão controlava a política de informática nos anos 80?", options: ["SEI (Secretaria Especial)", "MEC", "ANATEL", "Polícia Federal"], tip: "Segurança nacional.", summary: "A informática era vista como estratégica e militar.", critique: "A visão burocrática dificultou a flexibilidade pedagógica." },
+	    { decade: 1980, correct: 1, question: "O que era o 'BASIC' nas escolas dos anos 80?", options: ["Um jogo", "Linguagem de programação", "Marca de PC", "Antivírus"], tip: "Tela preta.", summary: "Alunos aprendiam a programar linhas de código simples.", critique: "Ensino muito técnico e pouco criativo para a maioria." },
+	    { decade: 1980, correct: 0, question: "A principal barreira para informática na escola pública nos anos 80 era:", options: ["Custo do Hardware", "Falta de eletricidade", "Professores contra", "Sem interesse"], tip: "Preço.", summary: "Um PC custava o preço de um carro.", critique: "Tornou a informática um privilégio de elite." },
+	
+	    // --- 1990 (10 Questões) ---
+	    { decade: 1990, correct: 1, question: "Em 1997, o MEC lançou o ProInfo. Qual era sua estrutura local?", options: ["Lan Houses", "NTEs", "Cinemas", "Shoppings"], tip: "Núcleos de Tecnologia.", summary: "O ProInfo criou os NTEs para capacitar professores.", critique: "Muitos NTEs foram sucateados com o tempo." },
+	    { decade: 1990, correct: 1, question: "O Programa TV Escola (1995) usava qual tecnologia?", options: ["Fibra ótica", "TV e Fitas VHS", "VR", "Tablets"], tip: "Via satélite.", summary: "Distribuía kits com TV, vídeo e parabólica.", critique: "O vídeo virou 'tapa-buraco' de aula vaga." },
+	    { decade: 1990, correct: 1, question: "O que os PCNs (1998) disseram sobre tecnologia?", options: ["Proibiram", "Tema Transversal", "Disciplina isolada", "Apenas no médio"], tip: "Diretrizes.", summary: "Sugeriram que TICs deveriam perpassar todas as disciplinas.", critique: "Faltou formação prática para professores." },
+	    { decade: 1990, correct: 1, question: "A Internet nos anos 90 mudou o foco para:", options: ["Programação", "Pesquisa e Comunicação", "Robótica", "Datilografia"], tip: "Janela para o mundo.", summary: "Deslocou o foco do 'programar' para o 'navegar'.", critique: "A pesquisa virou 'Ctrl+C Ctrl+V'." },
+	    { decade: 1990, correct: 1, question: "Principal obstáculo da internet nas escolas nos anos 90?", options: ["Desinteresse", "Conexão discada cara", "Censura", "Velocidade"], tip: "Ocupava o telefone.", summary: "A internet discada era lenta e cara.", critique: "Infraestrutura precária barrou a inclusão." },
+	    { decade: 1990, correct: 0, question: "O termo 'Softwares Educativos' nos anos 90 referia-se a:", options: ["CD-ROMs/Jogos", "Apps", "Nuvem", "IA"], tip: "Enciclopédia digital.", summary: "Explosão de CD-ROMs como Encarta e jogos.", critique: "Muitos eram apenas livros digitalizados." },
+	    { decade: 1990, correct: 2, question: "Onde ficavam os computadores na escola nos anos 90?", options: ["Na sala", "Com o diretor", "Laboratório Fechado", "Pátio"], tip: "Sala trancada.", summary: "Criação dos laboratórios segregados.", critique: "O laboratório virou santuário difícil de acessar." },
+	    { decade: 1990, correct: 1, question: "Papel do 'Multiplicador' no ProInfo:", options: ["Vender", "Formar professores", "Consertar", "Vigiar"], tip: "Tutor.", summary: "Professores do NTE treinavam os da escola.", critique: "Muitos viraram técnicos de manutenção." },
+	    { decade: 1990, correct: 0, question: "O 'Bug do Milênio' (Y2K) afetou a educação como?", options: ["Atualização de sistemas", "Destruiu escolas", "Não existiu", "Criou Wi-Fi"], tip: "Ano 2000.", summary: "Correria para atualizar softwares antigos.", critique: "Mostrou a obsolescência do parque tecnológico." },
+	    { decade: 1990, correct: 1, question: "A chegada do Windows 95 nas escolas marcou:", options: ["Fim da informática", "Padronização visual", "Uso do Linux", "Fim do mouse"], tip: "Interface gráfica.", summary: "Facilitou o uso, mas criou dependência.", critique: "Ensino virou 'curso de Office'." },
+	
+	    // --- 2000 (10 Questões) ---
+	    { decade: 2000, correct: 1, question: "O projeto UCA visava qual modelo?", options: ["Laboratório", "1:1 (Um por aluno)", "Desktop", "Lousa"], tip: "Laptop individual.", summary: "Distribuiu laptops (Classmate) para alunos.", critique: "Falhou por falta de infraestrutura e manutenção." },
+	    { decade: 2000, correct: 1, question: "Qual SO o governo incentivou nos anos 2000?", options: ["Windows", "Linux Educacional", "MacOS", "Android"], tip: "Software Livre.", summary: "MEC criou distro Linux para economizar.", critique: "Resistência cultural; instalavam Windows pirata." },
+	    { decade: 2000, correct: 1, question: "O Portal do Professor (2008) incentivava:", options: ["Vendas", "Troca de recursos", "Ponto", "Vigilância"], tip: "Colaboração.", summary: "Repositório de aulas e objetos digitais.", critique: "Falta de cultura de compartilhamento." },
+	    { decade: 2000, correct: 1, question: "O PBLE (2008) foi acordo com:", options: ["NASA", "Teles/Operadoras", "Exército", "Google"], tip: "Troca de metas.", summary: "Troca de metas de telefonia por internet escolar.", critique: "Velocidade (2Mbps) inútil para escola toda." },
+	    { decade: 2000, correct: 1, question: "Objetivo dos Telecentros Comunitários:", options: ["Jogos", "Inclusão digital", "Venda", "Inglês"], tip: "Acesso público.", summary: "Levavam internet para áreas carentes.", critique: "Viraram 'lan houses' sem mediação pedagógica." },
+	    { decade: 2000, correct: 1, question: "Os RIVED produziam:", options: ["Livros", "Objetos de Aprendizagem", "Móveis", "Vírus"], tip: "Simulações.", summary: "Módulos digitais de física/biologia.", critique: "Feitos em Flash, hoje obsoletos." },
+	    { decade: 2000, correct: 0, question: "O e-ProInfo era:", options: ["Ambiente Virtual (AVA)", "Um robô", "Um tablet", "Uma lei"], tip: "Moodle.", summary: "Plataforma oficial para cursos a distância.", critique: "Interface pouco amigável e complexa." },
+	    { decade: 2000, correct: 1, question: "Nos anos 2000, o 'Software Livre' foi visto como:", options: ["Perigoso", "Questão de soberania", "Ilegal", "Inútil"], tip: "Economia.", summary: "Governo Lula priorizou código aberto.", critique: "Faltou formação para o usuário final." },
+	    { decade: 2000, correct: 1, question: "A 'Lousa Digital' prometia:", options: ["Nada", "Interatividade na lousa", "Cinema", "Substituir professor"], tip: "Touch.", summary: "Professor controlava o PC na parede.", critique: "Subutilizada como simples projetor." },
+	    { decade: 2000, correct: 0, question: "O que significa TIC?", options: ["Tecnologias da Informação e Comunicação", "Técnico em Informática", "Teste de Inteligência", "Total Internet"], tip: "Sigla.", summary: "Termo padrão para tecnologias na educação.", critique: "O termo mudou para TDIC (Digitais) depois." },
+	
+	    // --- 2010 (10 Questões) ---
+	    { decade: 2010, correct: 1, question: "O que houve com os tablets de 2012?", options: ["Sucesso", "Ficaram sem uso", "Roubados", "Substituíram livros"], tip: "Sem Wi-Fi.", summary: "Escolas receberam tablets sem rede.", critique: "Tecnicismo sem planejamento." },
+	    { decade: 2010, correct: 1, question: "A BNCC (2017) definiu 'Cultura Digital' como:", options: ["Eletiva", "Competência Geral", "Proibida", "Técnica"], tip: "Obrigatório.", summary: "Direito de aprendizagem de todo aluno.", critique: "Difícil cobrar sem infraestrutura." },
+	    { decade: 2010, correct: 0, question: "Educação Conectada (2017) inovou ao:", options: ["Repassar verba direta", "Centralizar", "Satélite", "Proibir net"], tip: "Autonomia.", summary: "Dinheiro para contratar fibra local.", critique: "Não resolve onde não há provedor." },
+	    { decade: 2010, correct: 1, question: "O que são REA?", options: ["Softwares", "Recursos Abertos", "Livros caros", "Vírus"], tip: "Licença livre.", summary: "Materiais adaptáveis e compartilháveis.", critique: "Direitos autorais ainda barram." },
+	    { decade: 2010, correct: 1, question: "Tendência 'BYOD' significa:", options: ["Proibir celular", "Traga seu dispositivo", "Governo dá", "Laboratório"], tip: "Celular do aluno.", summary: "Uso do smartphone pessoal em aula.", critique: "Gera exclusão de quem não tem." },
+	    { decade: 2010, correct: 1, question: "O Movimento Maker trouxe:", options: ["Apenas provas", "Robótica/Mão na massa", "Mais livros", "Silêncio"], tip: "FabLab.", summary: "Aprender fazendo com impressoras 3D.", critique: "Aumentou desigualdade entre escolas." },
+	    { decade: 2010, correct: 1, question: "Ensino Híbrido propõe:", options: ["Só online", "Misturar presencial/online", "Só presencial", "Sem professor"], tip: "Rotação.", summary: "Personalização do ensino.", critique: "Exige internet em casa, o que muitos não têm." },
+	    { decade: 2010, correct: 0, question: "A 'Gamificação' usa:", options: ["Mecânicas de jogos", "Videogames apenas", "Jogos de azar", "Nada"], tip: "Pontos/Ranking.", summary: "Engajamento através de lógicas de jogo.", critique: "Muitas vezes superficial (só medalhas)." },
+	    { decade: 2010, correct: 1, question: "Plataformas Adaptativas prometem:", options: ["Mesma aula para todos", "Personalizar trilhas", "Vender dados", "Fim da escola"], tip: "Algoritmo.", summary: "Software adapta o conteúdo ao ritmo do aluno.", critique: "Risco de reduzir o currículo a treinos." },
+	    { decade: 2010, correct: 0, question: "O Marco Civil da Internet (2014) garantiu:", options: ["Neutralidade da rede", "Internet grátis", "Computadores", "Jogos"], tip: "Lei.", summary: "Princípios de uso da internet no Brasil.", critique: "Acesso universal ainda não cumprido." },
+	
+	    // --- 2020 (10 Questões) ---
+	    { decade: 2020, correct: 1, question: "A pandemia (2020) escancarou:", options: ["Excesso de tech", "O Fosso Digital", "Facilidade EAD", "Inutilidade PC"], tip: "Desigualdade.", summary: "Pobres sem acesso, ricos online.", critique: "Internet é direito essencial." },
+	    { decade: 2020, correct: 1, question: "Lei 14.533 (PNED) propõe:", options: ["Word", "Letramento/Computação", "Venda dados", "Fim escola"], tip: "Lei 2023.", summary: "Computação como conhecimento fundamental.", critique: "Faltam professores licenciados." },
+	    { decade: 2020, correct: 1, question: "Risco da 'Plataformização':", options: ["Madeira", "Dependência Big Techs", "Petróleo", "Jogos"], tip: "Privacidade.", summary: "Redes dependentes de Google/Microsoft.", critique: "Colonialismo digital e dados." },
+	    { decade: 2020, correct: 1, question: "Debate sobre IA Generativa (ChatGPT):", options: ["Conserto", "Plágio vs Autoria", "Eletricidade", "Salários"], tip: "Redação.", summary: "Repensar avaliação.", critique: "Ensinar a pensar COM a IA." },
+	    { decade: 2020, correct: 1, question: "LGPD nas escolas exige:", options: ["Proibir chamada", "Proteção de dados", "Facebook", "Fotos"], tip: "Lei.", summary: "Proteger dados de menores.", critique: "Escolas sem segurança cibernética." },
+	    { decade: 2020, correct: 1, question: "Novo Ensino Médio e TI:", options: ["Nenhuma", "Itinerários Formativos", "Proibiu", "Artes"], tip: "Técnico.", summary: "Possibilidade de ensino técnico em TI.", critique: "Escolas sem laboratórios para ofertar." },
+	    { decade: 2020, correct: 0, question: "O que é 'Letramento Digital'?", options: ["Saber usar crítica e tecnicamente", "Saber digitar", "Ter Facebook", "Ler e-books"], tip: "Além do clique.", summary: "Habilidade de interpretar e criar no digital.", critique: "Confundido com mero uso instrumental." },
+	    { decade: 2020, correct: 1, question: "O 'Ensino Remoto Emergencial' foi:", options: ["EAD planejado", "Improviso na pandemia", "Férias", "O ideal"], tip: "Crise.", summary: "Tentativa de manter aulas na Covid.", critique: "Confundiu-se com EAD de qualidade." },
+	    { decade: 2020, correct: 2, question: "A conectividade 5G nas escolas promete:", options: ["Nada", "Vírus", "Baixa latência/IoT", "Fim do Wi-Fi"], tip: "Velocidade.", summary: "Internet ultra-rápida para AR/VR.", critique: "Ainda longe da realidade da maioria." },
+	    { decade: 2020, correct: 0, question: "O uso de reconhecimento facial nas escolas gerou:", options: ["Polêmica sobre privacidade", "Segurança total", "Aprovação unânime", "Aumento de notas"], tip: "Vigilância.", summary: "Controle de frequência por câmera.", critique: "Risco de viés racial e vigilância excessiva." }
+		];
 
         // --- LÓGICA ---
         let queue = [], curr = 0, tips = 1, rems = 1, timer = 20, interval, active = false, currQ;
 
         function startGame() {
-            if(audioCtx.state==='suspended') audioCtx.resume();
-            SoundFX.playIntro();
-            document.getElementById('intro-screen').classList.add('hidden');
-            document.getElementById('end-screen').classList.add('hidden');
-            document.getElementById('game-container').classList.remove('hidden');
-            
-            // Montar fila: 3 de cada década
-            queue = [];
-            [1980,1990,2000,2010,2020].forEach(d => {
-                let p = questionPool.filter(q=>q.decade===d).sort(()=>0.5-Math.random());
-                queue.push(...p.slice(0,3));
-            });
-            
-            curr = 0; tips = 2; rems = 2;
-            document.getElementById('q-total').innerText = queue.length;
-            updateHelp();
-            setTimeout(loadQ, 1000);
-            active = true;
-        }
+		    if(audioCtx.state==='suspended') audioCtx.resume();
+		    SoundFX.playIntro();
+		    document.getElementById('intro-screen').classList.add('hidden');
+		    document.getElementById('end-screen').classList.add('hidden');
+		    document.getElementById('game-container').classList.remove('hidden');
+		    
+		    // Montagem da fila: Seleciona 3 perguntas de cada década de forma aleatória
+		    queue = [];
+		    [1980,1990,2000,2010,2020].forEach(d => {
+		        let p = questionPool.filter(q=>q.decade===d); // Pega todas da década
+		        let shuffled = shuffle([...p]); // Embaralha usando Fisher-Yates
+		        queue.push(...shuffled.slice(0,3)); // Pega as 3 primeiras
+		    });
+		    
+		    curr = 0; tips = 1; rems = 1;
+		    document.getElementById('q-total').innerText = queue.length;
+		    updateHelp();
+		    setTimeout(loadQ, 1000);
+		    active = true;
+		}
 
         function loadQ() {
             if(!active) return;
@@ -412,4 +447,5 @@
     </script>
 </body>
 </html>
+
 
