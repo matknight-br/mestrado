@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DataCorp: O Excedente - Fase 1 (Cruzamento Completo)</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --panel-bg: #1e293b;
+            --text-main: #38bdf8;
+            --text-alert: #f43f5e;
+            --text-success: #10b981;
+            --border-color: #334155;
+            --road-color: #262c3a;
+            --sidewalk-color: #475569;
+            --crosswalk-color: rgba(255, 255, 255, 0.15);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Courier New', Courier, monospace;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #game-area {
+            flex: 1;
+            position: relative;
+            background-color: var(--road-color);
+            border-right: 2px solid var(--border-color);
+            overflow: hidden;
+        }
+
+        /* Quarteirões */
+        .city-block {
+            position: absolute;
+            background-color: #1a2235; 
+            box-sizing: border-box;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+            z-index: 1;
+        }
+
+        .top-left { top: 0; left: 0; width: 28%; height: 28%; border-right: 60px solid var(--sidewalk-color); border-bottom: 60px solid var(--sidewalk-color); border-radius: 0 0 20px 0; }
+        .top-right { top: 0; right: 0; width: 28%; height: 28%; border-left: 60px solid var(--sidewalk-color); border-bottom: 60px solid var(--sidewalk-color); border-radius: 0 0 0 20px; }
+        .bottom-left { bottom: 0; left: 0; width: 28%; height: 28%; border-right: 60px solid var(--sidewalk-color); border-top: 60px solid var(--sidewalk-color); border-radius: 0 20px 0 0; }
+        .bottom-right { bottom: 0; right: 0; width: 28%; height: 28%; border-left: 60px solid var(--sidewalk-color); border-top: 60px solid var(--sidewalk-color); border-radius: 20px 0 0 0; }
+
+        /* Faixas de Pedestre */
+        .crosswalk {
+            position: absolute;
+            z-index: 2;
+            pointer-events: none;
+        }
+        
+        /* Faixas Horizontais (Onde as pessoas andam para os lados) */
+        .cw-h {
+            width: 44%; height: 6%;
+            left: 28%;
+            background: repeating-linear-gradient(90deg, var(--crosswalk-color) 0, var(--crosswalk-color) 20px, transparent 20px, transparent 40px);
+        }
+        .cw-top { top: 19%; }
+        .cw-bottom { top: 75%; }
+
+        /* Faixas Verticaais (Onde as pessoas andam para cima/baixo) */
+        .cw-v {
+            height: 44%; width: 4%;
+            top: 28%;
+            background: repeating-linear-gradient(0deg, var(--crosswalk-color) 0, var(--crosswalk-color) 20px, transparent 20px, transparent 40px);
+        }
+        .cw-left { left: 20%; }
+        .cw-right { left: 76%; }
+
+        /* Filtros e UI da Câmera */
+        .scanline {
+            position: absolute; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+            background-size: 100% 4px; pointer-events: none; z-index: 50;
+        }
+
+        .camera-ui {
+            position: absolute; top: 20px; left: 20px; z-index: 51;
+            font-size: 14px; color: rgba(56, 189, 248, 0.9); text-shadow: 0 0 5px var(--text-main);
+        }
+
+        .crosshair {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 80px; height: 80px; border: 2px solid rgba(56, 189, 248, 0.3); border-radius: 50%;
+            pointer-events: none; z-index: 40;
+        }
+        .crosshair::before, .crosshair::after { content: ''; position: absolute; background: rgba(56, 189, 248, 0.3); }
+        .crosshair::before { top: 50%; left: -15px; width: 110px; height: 2px; }
+        .crosshair::after { left: 50%; top: -15px; height: 110px; width: 2px; }
+
+        /* NPC */
+        .npc { position: absolute; transform: translate(-50%, -50%); z-index: 10; }
+        .emoji-inner { font-size: 55px; cursor: crosshair; user-select: none; transition: transform 0.2s, filter 0.2s; }
+        .emoji-inner:hover { transform: scale(1.3) !important; filter: drop-shadow(0 0 10px var(--text-main)); }
+        .npc.targeted .emoji-inner { filter: drop-shadow(0 0 20px var(--text-alert)); transform: scale(1.3) !important; }
+        .npc.targeted { z-index: 20; }
+
+        /* Dashboard */
+        #dashboard { width: 350px; background-color: var(--panel-bg); padding: 20px; display: flex; flex-direction: column; box-shadow: -5px 0 15px rgba(0,0,0,0.5); z-index: 60; }
+        h1 { font-size: 1.2rem; text-align: center; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-top: 0; color: #fff; }
+        .status-box { background-color: #0f172a; border: 1px solid var(--border-color); padding: 15px; margin-bottom: 20px; border-radius: 5px; }
+        #score-display { font-size: 1.5rem; color: var(--text-success); font-weight: bold; text-align: center; margin: 10px 0; }
+        .data-title { font-size: 0.9rem; color: #94a3b8; margin-bottom: 5px; text-transform: uppercase; }
+        #dados-conscientes, #dados-excedentes { min-height: 80px; font-size: 0.9rem; }
+        .hidden-data { color: var(--text-alert); filter: blur(4px); transition: filter 0.5s ease; }
+        .revealed-data { filter: blur(0); color: var(--text-success); }
+        #btn-extrair { background-color: var(--text-alert); color: white; border: none; padding: 15px; font-family: inherit; font-size: 1rem; font-weight: bold; cursor: pointer; border-radius: 5px; margin-top: auto; transition: background 0.3s; }
+        #btn-extrair:hover { background-color: #e11d48; }
+        #btn-extrair:disabled { background-color: #475569; cursor: not-allowed; color: #94a3b8; }
+        .log-entry { margin-bottom: 8px; }
+        .key { color: #cbd5e1; }
+        .val { color: #fcd34d; }
+    </style>
+</head>
+<body>
+
+    <div id="game-area">
+        <div class="city-block top-left"></div>
+        <div class="city-block top-right"></div>
+        <div class="city-block bottom-left"></div>
+        <div class="city-block bottom-right"></div>
+        
+        <div class="crosswalk cw-h cw-top"></div>
+        <div class="crosswalk cw-h cw-bottom"></div>
+        <div class="crosswalk cw-v cw-left"></div>
+        <div class="crosswalk cw-v cw-right"></div>
+        
+        <div class="crosshair"></div>
+        <div class="scanline"></div>
+        
+        <div class="camera-ui">
+            SISTEMA DATACORP - DRONE DE RUA 01<br>
+            LOCAL: CRUZAMENTO CENTRAL<br>
+            <span id="clock" style="color: #f43f5e;">00:00:00 REC</span>
+        </div>
+    </div>
+
+    <div id="dashboard">
+        <h1>DATACORP OS v1.2</h1>
+        
+        <div class="status-box">
+            <div class="data-title">Excedente Coletado</div>
+            <div id="score-display">0 YB (Yottabytes)</div>
+        </div>
+
+        <div class="status-box">
+            <div class="data-title">Alvo Focado: Dados Conscientes</div>
+            <div id="dados-conscientes">
+                Aguardando seleção de alvo...
+            </div>
+        </div>
+
+        <div class="status-box">
+            <div class="data-title">Análise Comportamental Profunda</div>
+            <div id="dados-excedentes" class="hidden-data">
+                Nenhum alvo selecionado.
+            </div>
+        </div>
+
+        <button id="btn-extrair" disabled>EXTRAIR EXCEDENTE</button>
+    </div>
+
+    <script>
+        // 1. DADOS DE GERAÇÃO: SISTEMA DE ARQUÉTIPOS LÓGICOS
+        const nomesFem = ['Ana', 'Beatriz', 'Mariana', 'Fernanda', 'Camila', 'Laura', 'Juliana', 'Marta', 'Helena', 'Sofia'];
+        const nomesMasc = ['Carlos', 'João', 'Roberto', 'Lucas', 'Ricardo', 'Pedro', 'Paulo', 'José', 'Marcos', 'Thiago'];
+
+        const arquetipos = [
+            // Femininos (Gênero: 'F')
+            { tipo: '👩‍💼', gen: 'F', profissoes: ['Executiva', 'Gerente', 'Contadora'], minIdade: 25, maxIdade: 55 },
+            { tipo: '👵', gen: 'F', profissoes: ['Aposentada', 'Avó', 'Pensionista'], minIdade: 65, maxIdade: 90 },
+            { tipo: '👩‍🎓', gen: 'F', profissoes: ['Estudante do Ensino Médio', 'Universitária'], minIdade: 16, maxIdade: 25 },
+            { tipo: '👮‍♀️', gen: 'F', profissoes: ['Policial', 'Inspetora', 'Segurança'], minIdade: 25, maxIdade: 45 },
+            { tipo: '👩‍⚕️', gen: 'F', profissoes: ['Médica', 'Enfermeira', 'Cirurgiã'], minIdade: 28, maxIdade: 60 },
+            { tipo: '👩‍🎤', gen: 'F', profissoes: ['Cantora', 'Artista', 'Influenciadora'], minIdade: 18, maxIdade: 35 },
+            { tipo: '🏃‍♀️', gen: 'F', profissoes: ['Atleta', 'Personal Trainer'], minIdade: 18, maxIdade: 40 },
+            // Masculinos (Gênero: 'M')
+            { tipo: '👨‍💻', gen: 'M', profissoes: ['Analista de Redes', 'SysAdmin', 'Desenvolvedor'], minIdade: 20, maxIdade: 50 },
+            { tipo: '👴', gen: 'M', profissoes: ['Aposentado', 'Avô', 'Pensionista'], minIdade: 65, maxIdade: 90 },
+            { tipo: '👨‍🎓', gen: 'M', profissoes: ['Estudante Técnico', 'Universitário'], minIdade: 16, maxIdade: 25 },
+            { tipo: '👷‍♂️', gen: 'M', profissoes: ['Mestre de Obras', 'Engenheiro', 'Técnico Base'], minIdade: 25, maxIdade: 60 },
+            { tipo: '🕵️‍♂️', gen: 'M', profissoes: ['Auditor', 'Investigador', 'Inspetor'], minIdade: 30, maxIdade: 60 },
+            { tipo: '👨‍🍳', gen: 'M', profissoes: ['Cozinheiro', 'Chef', 'Padeiro'], minIdade: 25, maxIdade: 60 },
+            { tipo: '👨‍🏫', gen: 'M', profissoes: ['Professor', 'Coordenador Pedagógico'], minIdade: 28, maxIdade: 65 },
+            { tipo: '🚶‍♂️', gen: 'M', profissoes: ['Comerciante', 'Vendedor', 'Desempregado'], minIdade: 20, maxIdade: 60 }
+        ];
+
+        // Dados Cômicos de Excedente (Mantidos)
+        const almocos = ['Marmita de estrogonofe frio', 'Dogão da esquina', 'Ar do ambiente (está de dieta)', 'Lasanha de microondas'];
+        const cafes = ['Café preto e desespero', 'Pão na chapa queimado', 'Suco verde suspeito', 'Não tomou (acordou atrasado)'];
+        const saldos = ['R$ -450,20 (No Cheque Especial)', 'R$ 12,50', 'Esperando o vale cair', 'R$ 2,00 na conta corrente'];
+        const segredos = ['Sofre com mau hálito', 'Usa a senha "123456"', 'Chorou no banho hoje', 'Finge que entende de vinhos'];
+        const pesquisas = ['"Como fingir que estou trabalhando"', '"Por que meu gato me julga?"', '"Como apagar o histórico do firewall"', '"Dor na lombar é grave?"'];
+        const expressoes = ['Sorriso falso nível 8', 'Tique nervoso no olho', 'Segurando um pum', 'Tentando lembrar se trancou a porta'];
+        const batimentos = ['120 bpm (viu a chefia)', '40 bpm (quase dormindo em pé)', '150 bpm (tomou 3 energéticos)'];
+
+        // 2. DEFINIÇÃO DE ROTAS
+        const caminhos = [
+            [{ left: '22%', top: '-10%' }, { left: '22%', top: '110%' }], // N -> S
+            [{ left: '78%', top: '110%' }, { left: '78%', top: '-10%' }], // S -> N
+            [{ left: '-10%', top: '22%' }, { left: '110%', top: '22%' }], // O -> L
+            [{ left: '110%', top: '78%' }, { left: '-10%', top: '78%' }], // L -> O
+            [{ left: '-10%', top: '22%' }, { left: '22%', top: '22%' }, { left: '22%', top: '110%' }], // Curva O -> S
+            [{ left: '110%', top: '78%' }, { left: '78%', top: '78%' }, { left: '78%', top: '-10%' }]  // Curva L -> N
+        ];
+
+        let score = 0;
+        let alvoAtual = null;
+        let excedenteExtraido = false;
+
+        const gameArea = document.getElementById('game-area');
+        const divConsciente = document.getElementById('dados-conscientes');
+        const divExcedente = document.getElementById('dados-excedentes');
+        const scoreDisplay = document.getElementById('score-display');
+        const btnExtrair = document.getElementById('btn-extrair');
+
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('clock').innerText = now.toLocaleTimeString() + " REC";
+        }, 1000);
+
+        function randomItem(array) { return array[Math.floor(Math.random() * array.length)]; }
+
+        // 3. CLASSE NPC COM GERAÇÃO LÓGICA
+        class NPC {
+            constructor() {
+                // Sorteia o arquétipo e gera dados coerentes
+                const arq = randomItem(arquetipos);
+                this.tipo = arq.tipo;
+                this.idade = Math.floor(Math.random() * (arq.maxIdade - arq.minIdade + 1)) + arq.minIdade;
+                this.profissao = randomItem(arq.profissoes);
+                this.nome = arq.gen === 'F' ? randomItem(nomesFem) : randomItem(nomesMasc);
+                
+                this.excedente = {
+                    "Almoço Ontem": randomItem(almocos),
+                    "Café da Manhã": randomItem(cafes),
+                    "Saldo Bancário": randomItem(saldos),
+                    "Segredo Íntimo": randomItem(segredos),
+                    "Pesquisa Recente": randomItem(pesquisas),
+                    "Microexpressão": randomItem(expressoes),
+                    "Biometria": randomItem(batimentos)
+                };
+                
+                const shuffled = Object.keys(this.excedente).sort(() => 0.5 - Math.random());
+                this.dadosAtivos = shuffled.slice(0, 4);
+
+                this.element = this.createElement();
+                this.anim = null;
+                this.spawn();
+            }
+
+            createElement() {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'npc';
+
+                this.emojiNode = document.createElement('div');
+                this.emojiNode.className = 'emoji-inner';
+                this.emojiNode.innerText = this.tipo;
+                
+                wrapper.appendChild(this.emojiNode);
+
+                this.emojiNode.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    focarAlvo(this, wrapper);
+                });
+
+                return wrapper;
+            }
+
+            spawn() {
+                const routeIndex = Math.floor(Math.random() * caminhos.length);
+                const routePoints = caminhos[routeIndex];
+                
+                if (routeIndex === 3 || routeIndex === 5) {
+                    this.emojiNode.style.transform = 'scaleX(-1)';
+                }
+
+                gameArea.appendChild(this.element);
+
+                const speed = Math.random() * 8000 + 12000; 
+
+                this.anim = this.element.animate(routePoints, {
+                    duration: speed,
+                    fill: 'forwards'
+                });
+
+                this.anim.onfinish = () => {
+                    if (this.element.parentNode) {
+                        this.element.parentNode.removeChild(this.element);
+                        if(alvoAtual === this) desativarAlvo();
+                    }
+                };
+            }
+        }
+
+        setInterval(() => {
+            if (document.querySelectorAll('.npc').length < 12) {
+                new NPC();
+            }
+        }, 2500);
+
+        for(let i=0; i<6; i++) {
+            setTimeout(() => new NPC(), i * 800);
+        }
+
+        // 4. LÓGICA DE INTERAÇÃO
+        function focarAlvo(npcData, wrapperElement) {
+            if (alvoAtual && alvoAtual !== npcData) {
+                alvoAtual.anim.play();
+                alvoAtual.element.classList.remove('targeted');
+            }
+
+            wrapperElement.classList.add('targeted');
+            alvoAtual = npcData;
+            excedenteExtraido = false;
+
+            npcData.anim.pause();
+
+            divConsciente.innerHTML = `
+                <div class="log-entry"><span class="key">Nome:</span> <span class="val">${npcData.nome}</span></div>
+                <div class="log-entry"><span class="key">Idade:</span> <span class="val">${npcData.idade} anos</span></div>
+                <div class="log-entry"><span class="key">Profissão:</span> <span class="val">${npcData.profissao}</span></div>
+            `;
+
+            let htmlExcedente = '';
+            npcData.dadosAtivos.forEach(key => {
+                htmlExcedente += `<div class="log-entry"><span class="key">${key}:</span> <span class="val">${npcData.excedente[key]}</span></div>`;
+            });
+            divExcedente.innerHTML = htmlExcedente;
+            divExcedente.className = 'hidden-data';
+            
+            btnExtrair.disabled = false;
+            btnExtrair.innerText = "EXTRAIR EXCEDENTE";
+            btnExtrair.style.backgroundColor = "var(--text-alert)";
+        }
+
+        function desativarAlvo() {
+            if (alvoAtual) {
+                alvoAtual.anim.play(); 
+                alvoAtual.element.classList.remove('targeted');
+            }
+            alvoAtual = null;
+            divConsciente.innerHTML = 'Aguardando seleção de alvo...';
+            divExcedente.innerHTML = 'Nenhum alvo selecionado.';
+            divExcedente.className = 'hidden-data';
+            btnExtrair.disabled = true;
+            btnExtrair.innerText = "EXTRAIR EXCEDENTE";
+            btnExtrair.style.backgroundColor = "var(--text-alert)";
+        }
+
+        gameArea.addEventListener('click', desativarAlvo);
+
+        btnExtrair.addEventListener('click', () => {
+            if (alvoAtual && !excedenteExtraido) {
+                divExcedente.classList.remove('hidden-data');
+                divExcedente.classList.add('revealed-data');
+                
+                score += Math.floor(Math.random() * 50) + 10;
+                scoreDisplay.innerText = `${score} YB (Yottabytes)`;
+                
+                excedenteExtraido = true;
+                btnExtrair.disabled = true;
+                btnExtrair.innerText = "DADOS VENDIDOS AO MERCADO FUTURO";
+                btnExtrair.style.backgroundColor = "var(--text-success)";
+            }
+        });
+    </script>
+</body>
+</html>
