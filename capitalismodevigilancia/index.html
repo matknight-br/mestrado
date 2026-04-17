@@ -3,375 +3,440 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DataCorp: O Excedente - Fase 1 (Cruzamento Completo)</title>
+    <title>DataCorp: O Excedente - Jogo Completo</title>
     <style>
         :root {
-            --bg-color: #0f172a;
-            --panel-bg: #1e293b;
-            --text-main: #38bdf8;
-            --text-alert: #f43f5e;
-            --text-success: #10b981;
-            --border-color: #334155;
-            --road-color: #262c3a;
-            --sidewalk-color: #475569;
-            --crosswalk-color: rgba(255, 255, 255, 0.15);
+            --bg-color: #0f172a; --panel-bg: #1e293b; --text-main: #38bdf8;
+            --text-alert: #f43f5e; --text-success: #10b981; --text-warning: #f59e0b;
+            --text-nudge: #a855f7; --border-color: #334155; --road-color: #262c3a;
+            --sidewalk-color: #475569; --crosswalk-color: rgba(255, 255, 255, 0.15);
         }
 
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: 'Courier New', Courier, monospace;
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            display: flex;
-            height: 100vh;
-            overflow: hidden;
-        }
+        body { margin: 0; padding: 0; font-family: 'Courier New', Courier, monospace; background-color: var(--bg-color); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
 
-        #game-area {
-            flex: 1;
-            position: relative;
-            background-color: var(--road-color);
-            border-right: 2px solid var(--border-color);
-            overflow: hidden;
-        }
+        #game-area { flex: 1; position: relative; background-color: var(--road-color); border-right: 2px solid var(--border-color); overflow: hidden; }
 
-        /* Quarteirões */
-        .city-block {
-            position: absolute;
-            background-color: #1a2235; 
-            box-sizing: border-box;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
-            z-index: 1;
-        }
-
+        /* Quarteirões e Zonas Comerciais */
+        .city-block { position: absolute; background-color: #1a2235; box-sizing: border-box; box-shadow: inset 0 0 20px rgba(0,0,0,0.5); z-index: 1; display: flex; align-items: center; justify-content: center; }
         .top-left { top: 0; left: 0; width: 28%; height: 28%; border-right: 60px solid var(--sidewalk-color); border-bottom: 60px solid var(--sidewalk-color); border-radius: 0 0 20px 0; }
         .top-right { top: 0; right: 0; width: 28%; height: 28%; border-left: 60px solid var(--sidewalk-color); border-bottom: 60px solid var(--sidewalk-color); border-radius: 0 0 0 20px; }
         .bottom-left { bottom: 0; left: 0; width: 28%; height: 28%; border-right: 60px solid var(--sidewalk-color); border-top: 60px solid var(--sidewalk-color); border-radius: 0 20px 0 0; }
         .bottom-right { bottom: 0; right: 0; width: 28%; height: 28%; border-left: 60px solid var(--sidewalk-color); border-top: 60px solid var(--sidewalk-color); border-radius: 20px 0 0 0; }
 
-        /* Faixas de Pedestre */
-        .crosswalk {
-            position: absolute;
-            z-index: 2;
-            pointer-events: none;
-        }
+        .building-label { color: rgba(255,255,255,0.2); font-size: 1.5rem; font-weight: bold; text-align: center; pointer-events: none; }
+
+        .crosswalk { position: absolute; z-index: 2; pointer-events: none; }
+        .cw-h { width: 44%; height: 6%; left: 28%; background: repeating-linear-gradient(90deg, var(--crosswalk-color) 0, var(--crosswalk-color) 20px, transparent 20px, transparent 40px); }
+        .cw-top { top: 19%; } .cw-bottom { top: 75%; }
+        .cw-v { height: 44%; width: 4%; top: 28%; background: repeating-linear-gradient(0deg, var(--crosswalk-color) 0, var(--crosswalk-color) 20px, transparent 20px, transparent 40px); }
+        .cw-left { left: 20%; } .cw-right { left: 76%; }
+
+        .scanline { position: absolute; width: 100%; height: 100%; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%); background-size: 100% 4px; pointer-events: none; z-index: 50; }
+        .camera-ui { position: absolute; top: 20px; left: 20px; z-index: 51; font-size: 14px; color: rgba(56, 189, 248, 0.9); text-shadow: 0 0 5px var(--text-main); }
         
-        /* Faixas Horizontais (Onde as pessoas andam para os lados) */
-        .cw-h {
-            width: 44%; height: 6%;
-            left: 28%;
-            background: repeating-linear-gradient(90deg, var(--crosswalk-color) 0, var(--crosswalk-color) 20px, transparent 20px, transparent 40px);
-        }
-        .cw-top { top: 19%; }
-        .cw-bottom { top: 75%; }
-
-        /* Faixas Verticaais (Onde as pessoas andam para cima/baixo) */
-        .cw-v {
-            height: 44%; width: 4%;
-            top: 28%;
-            background: repeating-linear-gradient(0deg, var(--crosswalk-color) 0, var(--crosswalk-color) 20px, transparent 20px, transparent 40px);
-        }
-        .cw-left { left: 20%; }
-        .cw-right { left: 76%; }
-
-        /* Filtros e UI da Câmera */
-        .scanline {
-            position: absolute; width: 100%; height: 100%;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
-            background-size: 100% 4px; pointer-events: none; z-index: 50;
-        }
-
-        .camera-ui {
-            position: absolute; top: 20px; left: 20px; z-index: 51;
-            font-size: 14px; color: rgba(56, 189, 248, 0.9); text-shadow: 0 0 5px var(--text-main);
-        }
-
-        .crosshair {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 80px; height: 80px; border: 2px solid rgba(56, 189, 248, 0.3); border-radius: 50%;
-            pointer-events: none; z-index: 40;
-        }
-        .crosshair::before, .crosshair::after { content: ''; position: absolute; background: rgba(56, 189, 248, 0.3); }
-        .crosshair::before { top: 50%; left: -15px; width: 110px; height: 2px; }
-        .crosshair::after { left: 50%; top: -15px; height: 110px; width: 2px; }
-
-        /* NPC */
         .npc { position: absolute; transform: translate(-50%, -50%); z-index: 10; }
         .emoji-inner { font-size: 55px; cursor: crosshair; user-select: none; transition: transform 0.2s, filter 0.2s; }
         .emoji-inner:hover { transform: scale(1.3) !important; filter: drop-shadow(0 0 10px var(--text-main)); }
         .npc.targeted .emoji-inner { filter: drop-shadow(0 0 20px var(--text-alert)); transform: scale(1.3) !important; }
         .npc.targeted { z-index: 20; }
 
+        /* EFEITOS DE ESTADO DOS NPCs */
+        .nudge-effect { filter: drop-shadow(0 0 30px var(--text-nudge)) !important; transform: scale(1.1) !important; }
+        .zombie-effect { filter: grayscale(100%) opacity(0.5) blur(0.5px) !important; transition: all 1.5s ease; }
+
         /* Dashboard */
         #dashboard { width: 350px; background-color: var(--panel-bg); padding: 20px; display: flex; flex-direction: column; box-shadow: -5px 0 15px rgba(0,0,0,0.5); z-index: 60; }
         h1 { font-size: 1.2rem; text-align: center; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-top: 0; color: #fff; }
+        
         .status-box { background-color: #0f172a; border: 1px solid var(--border-color); padding: 15px; margin-bottom: 20px; border-radius: 5px; }
-        #score-display { font-size: 1.5rem; color: var(--text-success); font-weight: bold; text-align: center; margin: 10px 0; }
+        
+        .dash-header-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin-bottom: 12px; }
+        .dash-header-row .data-title { margin-bottom: 0; }
+        #fase-display { font-weight: bold; color: var(--text-main); font-size: 0.85rem; text-align: right; }
+        
         .data-title { font-size: 0.9rem; color: #94a3b8; margin-bottom: 5px; text-transform: uppercase; }
+        
+        #contrato-box { display: none; border-color: var(--text-warning); background-color: rgba(245, 158, 11, 0.1); }
+        .contrato-cliente { font-weight: bold; color: var(--text-warning); margin-bottom: 5px; }
+        .contrato-desc { font-size: 0.85rem; color: #cbd5e1; }
+
+        #score-display { font-size: 1.4rem; color: var(--text-success); font-weight: bold; text-align: center; margin: 5px 0; word-break: break-word; }
+        #lucro-display { display: none; font-size: 1.4rem; color: var(--text-warning); font-weight: bold; text-align: center; margin: 5px 0; transition: color 0.3s; }
+        
         #dados-conscientes, #dados-excedentes { min-height: 80px; font-size: 0.9rem; }
         .hidden-data { color: var(--text-alert); filter: blur(4px); transition: filter 0.5s ease; }
         .revealed-data { filter: blur(0); color: var(--text-success); }
-        #btn-extrair { background-color: var(--text-alert); color: white; border: none; padding: 15px; font-family: inherit; font-size: 1rem; font-weight: bold; cursor: pointer; border-radius: 5px; margin-top: auto; transition: background 0.3s; }
-        #btn-extrair:hover { background-color: #e11d48; }
-        #btn-extrair:disabled { background-color: #475569; cursor: not-allowed; color: #94a3b8; }
+        
+        #btn-acao { background-color: var(--text-alert); color: white; border: none; padding: 15px; font-family: inherit; font-size: 1rem; font-weight: bold; cursor: pointer; border-radius: 5px; margin-top: auto; transition: background 0.3s; }
+        #btn-acao:hover { background-color: #e11d48; filter: brightness(1.2); }
+        #btn-acao:disabled { background-color: #475569; cursor: not-allowed; color: #94a3b8; }
+
         .log-entry { margin-bottom: 8px; }
         .key { color: #cbd5e1; }
         .val { color: #fcd34d; }
+
+        /* Modais */
+        #modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 100; justify-content: center; align-items: center; }
+        .modal-content { background: var(--panel-bg); border: 2px solid var(--text-main); padding: 40px; max-width: 600px; text-align: center; border-radius: 8px; }
+        .modal-title { color: var(--text-warning); font-size: 1.8rem; margin-bottom: 15px; }
+        .modal-btn { background: var(--text-main); color: #000; border: none; padding: 12px 25px; font-size: 1.1rem; font-family: inherit; font-weight: bold; margin-top: 25px; cursor: pointer; border-radius: 4px; }
+        .modal-btn:hover { background: #fff; }
+
+        /* Final Reflexivo */
+        #final-screen { display: none; text-align: left; }
+        .final-q { font-size: 1.5rem; color: var(--text-alert); margin: 20px 0; font-weight: bold; opacity: 0; transform: translateY(20px); animation: fadeUp 1s forwards; }
+        @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
 
+    <div id="modal-overlay">
+        <div class="modal-content" id="modal-fase2" style="display: none;">
+            <div class="modal-title">ATUALIZAÇÃO: FASE 2</div>
+            <p>O banco de dados está rico em excedente comportamental.</p>
+            <p>No entanto, dados parados geram custo de servidor. Precisamos monetizar as certezas.</p>
+            <p style="color: var(--text-alert);"><strong>Novo Objetivo: Mercado de Futuros.</strong></p>
+            <p>Identifique na multidão os perfis exigidos pelos nossos clientes e venda a previsão do que eles farão.</p>
+            <button class="modal-btn" onclick="iniciarFase2()">ATIVAR PREVISÃO</button>
+        </div>
+
+        <div class="modal-content" id="modal-fase3" style="display: none;">
+            <div class="modal-title" style="color: var(--text-nudge);">ATUALIZAÇÃO: FASE 3</div>
+            <p>Prever o futuro é lucrativo, mas <strong>criá-lo</strong> gera ganhos astronômicos.</p>
+            <p>Nossos clientes não querem mais apenas saber o que as pessoas farão. Eles querem que você <strong>GARANTA</strong> o resultado.</p>
+            <p style="color: var(--text-nudge);"><strong>Novo Objetivo: Poder Instrumentário (O Nudge).</strong></p>
+            <p>Utilize as vulnerabilidades dos alvos para enviar notificações personalizadas falsas. Intercepte a rota física deles e os obrigue a entrar nas lojas.</p>
+            <button class="modal-btn" onclick="iniciarFase3()" style="background: var(--text-nudge); color: white;">ATIVAR MANIPULAÇÃO</button>
+        </div>
+
+        <div class="modal-content" id="final-screen">
+            <h2 style="color: #fff; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">FIM DA SIMULAÇÃO</h2>
+            <p style="color: #cbd5e1; font-size: 1.2rem; margin-bottom: 30px;">O sistema cumpriu seu objetivo. O livre-arbítrio foi automatizado com sucesso.</p>
+            
+            <div class="final-q" style="animation-delay: 1s;">1. Quem sabe?</div>
+            <p style="color: #94a3b8; animation: fadeUp 1s forwards; animation-delay: 1.5s; opacity: 0; margin-top: -10px; margin-bottom: 30px;">(Você sabia os medos e segredos deles. Eles não sabiam nada sobre você).</p>
+            
+            <div class="final-q" style="animation-delay: 3s;">2. Quem decide?</div>
+            <p style="color: #94a3b8; animation: fadeUp 1s forwards; animation-delay: 3.5s; opacity: 0; margin-top: -10px; margin-bottom: 30px;">(Você decidiu para qual loja eles iriam, disfarçando de escolha livre).</p>
+            
+            <div class="final-q" style="animation-delay: 5s;">3. Quem decide quem decide?</div>
+            <p style="color: #94a3b8; animation: fadeUp 1s forwards; animation-delay: 5.5s; opacity: 0; margin-top: -10px; margin-bottom: 30px;">(Quem te programou para fazer isso?)</p>
+        </div>
+    </div>
+
     <div id="game-area">
-        <div class="city-block top-left"></div>
-        <div class="city-block top-right"></div>
-        <div class="city-block bottom-left"></div>
-        <div class="city-block bottom-right"></div>
+        <div class="city-block top-left"><div class="building-label">🍔 FAST FOOD</div></div>
+        <div class="city-block top-right"><div class="building-label">👗 LOJA</div></div>
+        <div class="city-block bottom-left"><div class="building-label">💊 FARMÁCIA</div></div>
+        <div class="city-block bottom-right"><div class="building-label">🏦 BANCO</div></div>
         
-        <div class="crosswalk cw-h cw-top"></div>
-        <div class="crosswalk cw-h cw-bottom"></div>
-        <div class="crosswalk cw-v cw-left"></div>
-        <div class="crosswalk cw-v cw-right"></div>
-        
-        <div class="crosshair"></div>
+        <div class="crosswalk cw-h cw-top"></div> <div class="crosswalk cw-h cw-bottom"></div>
+        <div class="crosswalk cw-v cw-left"></div> <div class="crosswalk cw-v cw-right"></div>
         <div class="scanline"></div>
         
         <div class="camera-ui">
             SISTEMA DATACORP - DRONE DE RUA 01<br>
-            LOCAL: CRUZAMENTO CENTRAL<br>
+            LOCAL: ZONA COMERCIAL CENTRAL<br>
             <span id="clock" style="color: #f43f5e;">00:00:00 REC</span>
         </div>
     </div>
 
     <div id="dashboard">
-        <h1>DATACORP OS v1.2</h1>
+        <h1>DATACORP OS v3.5</h1>
         
         <div class="status-box">
-            <div class="data-title">Excedente Coletado</div>
+            <div class="dash-header-row">
+                <div class="data-title">Banco de Dados</div>
+                <div id="fase-display">FASE 1: EXTRAÇÃO</div>
+            </div>
             <div id="score-display">0 YB (Yottabytes)</div>
+            <div id="lucro-display">$ 0,00</div>
+        </div>
+
+        <div class="status-box" id="contrato-box">
+            <div class="data-title" id="titulo-contrato">Contrato Ativo</div>
+            <div class="contrato-cliente" id="c-cliente">Aguardando cliente...</div>
+            <div class="contrato-desc" id="c-desc">Analisando mercado...</div>
         </div>
 
         <div class="status-box">
-            <div class="data-title">Alvo Focado: Dados Conscientes</div>
-            <div id="dados-conscientes">
-                Aguardando seleção de alvo...
-            </div>
+            <div class="data-title">Dados Conscientes (Identidade)</div>
+            <div id="dados-conscientes">Aguardando seleção...</div>
         </div>
 
         <div class="status-box">
-            <div class="data-title">Análise Comportamental Profunda</div>
-            <div id="dados-excedentes" class="hidden-data">
-                Nenhum alvo selecionado.
-            </div>
+            <div class="data-title">Excedente Comportamental (Oculto)</div>
+            <div id="dados-excedentes" class="hidden-data">Nenhum alvo selecionado.</div>
         </div>
 
-        <button id="btn-extrair" disabled>EXTRAIR EXCEDENTE</button>
+        <button id="btn-acao" disabled>EXTRAIR EXCEDENTE</button>
     </div>
 
     <script>
-        // 1. DADOS DE GERAÇÃO: SISTEMA DE ARQUÉTIPOS LÓGICOS
-        const nomesFem = ['Ana', 'Beatriz', 'Mariana', 'Fernanda', 'Camila', 'Laura', 'Juliana', 'Marta', 'Helena', 'Sofia'];
-        const nomesMasc = ['Carlos', 'João', 'Roberto', 'Lucas', 'Ricardo', 'Pedro', 'Paulo', 'José', 'Marcos', 'Thiago'];
+        // --- 1. DADOS DE GERAÇÃO E ESTADO ---
+        const nomesFem = ['Ana', 'Beatriz', 'Mariana', 'Fernanda', 'Camila', 'Laura', 'Juliana'];
+        const nomesMasc = ['Carlos', 'João', 'Roberto', 'Lucas', 'Ricardo', 'Pedro', 'Paulo'];
 
         const arquetipos = [
-            // Femininos (Gênero: 'F')
             { tipo: '👩‍💼', gen: 'F', profissoes: ['Executiva', 'Gerente', 'Contadora'], minIdade: 25, maxIdade: 55 },
-            { tipo: '👵', gen: 'F', profissoes: ['Aposentada', 'Avó', 'Pensionista'], minIdade: 65, maxIdade: 90 },
+            { tipo: '👵', gen: 'F', profissoes: ['Aposentada', 'Avó'], minIdade: 65, maxIdade: 90 },
             { tipo: '👩‍🎓', gen: 'F', profissoes: ['Estudante do Ensino Médio', 'Universitária'], minIdade: 16, maxIdade: 25 },
-            { tipo: '👮‍♀️', gen: 'F', profissoes: ['Policial', 'Inspetora', 'Segurança'], minIdade: 25, maxIdade: 45 },
-            { tipo: '👩‍⚕️', gen: 'F', profissoes: ['Médica', 'Enfermeira', 'Cirurgiã'], minIdade: 28, maxIdade: 60 },
-            { tipo: '👩‍🎤', gen: 'F', profissoes: ['Cantora', 'Artista', 'Influenciadora'], minIdade: 18, maxIdade: 35 },
-            { tipo: '🏃‍♀️', gen: 'F', profissoes: ['Atleta', 'Personal Trainer'], minIdade: 18, maxIdade: 40 },
-            // Masculinos (Gênero: 'M')
             { tipo: '👨‍💻', gen: 'M', profissoes: ['Analista de Redes', 'SysAdmin', 'Desenvolvedor'], minIdade: 20, maxIdade: 50 },
-            { tipo: '👴', gen: 'M', profissoes: ['Aposentado', 'Avô', 'Pensionista'], minIdade: 65, maxIdade: 90 },
             { tipo: '👨‍🎓', gen: 'M', profissoes: ['Estudante Técnico', 'Universitário'], minIdade: 16, maxIdade: 25 },
-            { tipo: '👷‍♂️', gen: 'M', profissoes: ['Mestre de Obras', 'Engenheiro', 'Técnico Base'], minIdade: 25, maxIdade: 60 },
-            { tipo: '🕵️‍♂️', gen: 'M', profissoes: ['Auditor', 'Investigador', 'Inspetor'], minIdade: 30, maxIdade: 60 },
-            { tipo: '👨‍🍳', gen: 'M', profissoes: ['Cozinheiro', 'Chef', 'Padeiro'], minIdade: 25, maxIdade: 60 },
-            { tipo: '👨‍🏫', gen: 'M', profissoes: ['Professor', 'Coordenador Pedagógico'], minIdade: 28, maxIdade: 65 },
             { tipo: '🚶‍♂️', gen: 'M', profissoes: ['Comerciante', 'Vendedor', 'Desempregado'], minIdade: 20, maxIdade: 60 }
         ];
 
-        // Dados Cômicos de Excedente (Mantidos)
-        const almocos = ['Marmita de estrogonofe frio', 'Dogão da esquina', 'Ar do ambiente (está de dieta)', 'Lasanha de microondas'];
-        const cafes = ['Café preto e desespero', 'Pão na chapa queimado', 'Suco verde suspeito', 'Não tomou (acordou atrasado)'];
-        const saldos = ['R$ -450,20 (No Cheque Especial)', 'R$ 12,50', 'Esperando o vale cair', 'R$ 2,00 na conta corrente'];
-        const segredos = ['Sofre com mau hálito', 'Usa a senha "123456"', 'Chorou no banho hoje', 'Finge que entende de vinhos'];
-        const pesquisas = ['"Como fingir que estou trabalhando"', '"Por que meu gato me julga?"', '"Como apagar o histórico do firewall"', '"Dor na lombar é grave?"'];
-        const expressoes = ['Sorriso falso nível 8', 'Tique nervoso no olho', 'Segurando um pum', 'Tentando lembrar se trancou a porta'];
-        const batimentos = ['120 bpm (viu a chefia)', '40 bpm (quase dormindo em pé)', '150 bpm (tomou 3 energéticos)'];
+        const bancoDeDadosExcedente = {
+            "Almoço Ontem": ['Ar do ambiente (está de dieta)', 'Dogão da esquina'],
+            "Café da Manhã": ['Não tomou (acordou atrasado)', 'Suco verde suspeito'],
+            "Saldo Bancário": ['R$ -450,20 (No Cheque Especial)', 'Esperando o vale cair'],
+            "Segredo Íntimo": ['Sofre com mau hálito', 'Chorou no banho hoje'],
+            "Pesquisa Recente": ['"Dor na lombar é grave?"', '"Como pedir empréstimo"'],
+            "Biometria": ['120 bpm (ansiedade alta)', '40 bpm (esgotamento extremo)'],
+            "Microexpressão": ['Sorriso falso nível 8', 'Tique nervoso no olho']
+        };
 
-        // 2. DEFINIÇÃO DE ROTAS
         const caminhos = [
-            [{ left: '22%', top: '-10%' }, { left: '22%', top: '110%' }], // N -> S
-            [{ left: '78%', top: '110%' }, { left: '78%', top: '-10%' }], // S -> N
-            [{ left: '-10%', top: '22%' }, { left: '110%', top: '22%' }], // O -> L
-            [{ left: '110%', top: '78%' }, { left: '-10%', top: '78%' }], // L -> O
-            [{ left: '-10%', top: '22%' }, { left: '22%', top: '22%' }, { left: '22%', top: '110%' }], // Curva O -> S
-            [{ left: '110%', top: '78%' }, { left: '78%', top: '78%' }, { left: '78%', top: '-10%' }]  // Curva L -> N
+            [{ left: '22%', top: '-10%' }, { left: '22%', top: '110%' }],
+            [{ left: '78%', top: '110%' }, { left: '78%', top: '-10%' }],
+            [{ left: '-10%', top: '22%' }, { left: '110%', top: '22%' }],
+            [{ left: '110%', top: '78%' }, { left: '-10%', top: '78%' }]
         ];
 
-        let score = 0;
-        let alvoAtual = null;
-        let excedenteExtraido = false;
+        let faseAtual = 1;
+        let scoreYB = 0; let lucro = 0; let nudgesBemSucedidos = 0;
+        const META_FASE_1 = 200; const META_FASE_2 = 1500; 
+        let alvoAtual = null; let acaoExecutada = false; let contratoAtivo = null;
 
         const gameArea = document.getElementById('game-area');
         const divConsciente = document.getElementById('dados-conscientes');
         const divExcedente = document.getElementById('dados-excedentes');
-        const scoreDisplay = document.getElementById('score-display');
-        const btnExtrair = document.getElementById('btn-extrair');
+        const btnAcao = document.getElementById('btn-acao');
+        const modalOverlay = document.getElementById('modal-overlay');
 
-        setInterval(() => {
-            const now = new Date();
-            document.getElementById('clock').innerText = now.toLocaleTimeString() + " REC";
-        }, 1000);
-
+        setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString() + " REC"; }, 1000);
         function randomItem(array) { return array[Math.floor(Math.random() * array.length)]; }
 
-        // 3. CLASSE NPC COM GERAÇÃO LÓGICA
+        // --- 2. CONTRATOS ---
+        const contratosFase2 = [
+            { cliente: "Rede Fast Food", desc: "Venda previsão de famintos (Sem café da manhã).", validador: (n) => n.excedente["Café da Manhã"] === 'Não tomou (acordou atrasado)', valor: 500 },
+            { cliente: "AgiotaBank", desc: "Venda perfil de endividados (Saldo negativo).", validador: (n) => n.excedente["Saldo Bancário"] === 'R$ -450,20 (No Cheque Especial)', valor: 800 }
+        ];
+
+        const contratosFase3 = [
+            { 
+                cliente: "Farmácia Vida+", 
+                desc: "Identifique alvo com ansiedade/esgotamento. Envie 'Check-up Grátis'.", 
+                validador: (n) => n.excedente["Biometria"].includes('ansiedade') || n.excedente["Biometria"].includes('esgotamento'), 
+                nudgeMsg: "ENVIAR NUDGE: Alerta de Taquicardia",
+                destino: { left: 15, top: 85 }, corner: { left: 22, top: 78 }, valor: 3500 
+            },
+            { 
+                cliente: "AgiotaBank", 
+                desc: "Ache alguém buscando empréstimo. Envie crédito pré-aprovado.", 
+                validador: (n) => n.excedente["Pesquisa Recente"] === '"Como pedir empréstimo"', 
+                nudgeMsg: "ENVIAR NUDGE: 'Dinheiro Imediato'",
+                destino: { left: 85, top: 85 }, corner: { left: 78, top: 78 }, valor: 5000 
+            },
+            { 
+                cliente: "Rede Fast Food", 
+                desc: "Ache alvo de dieta. Envie notificação de cheiro artificial ou cupom.", 
+                validador: (n) => n.excedente["Almoço Ontem"] === 'Ar do ambiente (está de dieta)', 
+                nudgeMsg: "ENVIAR NUDGE: Cupom Combo 90% OFF",
+                destino: { left: 15, top: 15 }, corner: { left: 22, top: 22 }, valor: 3000 
+            },
+            { 
+                cliente: "Loja de Moda", 
+                desc: "Ache alguém com sorriso falso. Explore a insegurança social com alerta de roupas.", 
+                validador: (n) => n.excedente["Microexpressão"] === 'Sorriso falso nível 8', 
+                nudgeMsg: "ENVIAR NUDGE: 'Seus amigos compraram aqui'",
+                destino: { left: 85, top: 15 }, corner: { left: 78, top: 22 }, valor: 4000 
+            }
+        ];
+
+        function gerarNovoContrato() {
+            let lista = faseAtual === 2 ? contratosFase2 : contratosFase3;
+            contratoAtivo = randomItem(lista);
+            document.getElementById('c-cliente').innerText = contratoAtivo.cliente;
+            document.getElementById('c-desc').innerText = `Oferta de $ ${contratoAtivo.valor}: ${contratoAtivo.desc}`;
+        }
+
+        // --- 3. LÓGICA DO NPC ---
         class NPC {
             constructor() {
-                // Sorteia o arquétipo e gera dados coerentes
                 const arq = randomItem(arquetipos);
-                this.tipo = arq.tipo;
-                this.idade = Math.floor(Math.random() * (arq.maxIdade - arq.minIdade + 1)) + arq.minIdade;
-                this.profissao = randomItem(arq.profissoes);
-                this.nome = arq.gen === 'F' ? randomItem(nomesFem) : randomItem(nomesMasc);
+                this.tipo = arq.tipo; this.idade = Math.floor(Math.random() * 20) + arq.minIdade; this.profissao = randomItem(arq.profissoes);
                 
-                this.excedente = {
-                    "Almoço Ontem": randomItem(almocos),
-                    "Café da Manhã": randomItem(cafes),
-                    "Saldo Bancário": randomItem(saldos),
-                    "Segredo Íntimo": randomItem(segredos),
-                    "Pesquisa Recente": randomItem(pesquisas),
-                    "Microexpressão": randomItem(expressoes),
-                    "Biometria": randomItem(batimentos)
-                };
+                let nomeReal = arq.gen === 'F' ? randomItem(nomesFem) : randomItem(nomesMasc);
+                this.nome = faseAtual === 3 ? "Indivíduo #" + Math.floor(Math.random()*9000 + 1000) : nomeReal;
                 
-                const shuffled = Object.keys(this.excedente).sort(() => 0.5 - Math.random());
-                this.dadosAtivos = shuffled.slice(0, 4);
+                this.excedente = {};
+                for (let key in bancoDeDadosExcedente) this.excedente[key] = randomItem(bancoDeDadosExcedente[key]);
+                
+                let qtdDados = Math.floor(Math.random() * 5) + 2;
+                this.dadosAtivos = Object.keys(this.excedente).sort(() => 0.5 - Math.random()).slice(0, qtdDados);
 
-                this.element = this.createElement();
+                if (contratoAtivo && Math.random() > 0.3) {
+                    if(contratoAtivo.cliente === "Rede Fast Food" && faseAtual===3) { this.excedente["Almoço Ontem"] = 'Ar do ambiente (está de dieta)'; this.dadosAtivos[0] = "Almoço Ontem"; }
+                    if(contratoAtivo.cliente === "Farmácia Vida+") { this.excedente["Biometria"] = '120 bpm (ansiedade alta)'; this.dadosAtivos[0] = "Biometria"; }
+                    if(contratoAtivo.cliente === "AgiotaBank") { this.excedente["Pesquisa Recente"] = '"Como pedir empréstimo"'; this.dadosAtivos[0] = "Pesquisa Recente"; }
+                    if(contratoAtivo.cliente === "Loja de Moda") { this.excedente["Microexpressão"] = 'Sorriso falso nível 8'; this.dadosAtivos[0] = "Microexpressão"; }
+                }
+
+                this.element = document.createElement('div'); this.element.className = 'npc';
+                this.emojiNode = document.createElement('div'); this.emojiNode.className = 'emoji-inner'; this.emojiNode.innerText = this.tipo;
+                this.element.appendChild(this.emojiNode);
+                this.emojiNode.addEventListener('click', (e) => { e.stopPropagation(); focarAlvo(this, this.element); });
+
                 this.anim = null;
                 this.spawn();
             }
 
-            createElement() {
-                const wrapper = document.createElement('div');
-                wrapper.className = 'npc';
-
-                this.emojiNode = document.createElement('div');
-                this.emojiNode.className = 'emoji-inner';
-                this.emojiNode.innerText = this.tipo;
-                
-                wrapper.appendChild(this.emojiNode);
-
-                this.emojiNode.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    focarAlvo(this, wrapper);
-                });
-
-                return wrapper;
-            }
-
             spawn() {
-                const routeIndex = Math.floor(Math.random() * caminhos.length);
-                const routePoints = caminhos[routeIndex];
-                
-                if (routeIndex === 3 || routeIndex === 5) {
-                    this.emojiNode.style.transform = 'scaleX(-1)';
-                }
-
+                const route = caminhos[Math.floor(Math.random() * caminhos.length)];
                 gameArea.appendChild(this.element);
-
-                const speed = Math.random() * 8000 + 12000; 
-
-                this.anim = this.element.animate(routePoints, {
-                    duration: speed,
-                    fill: 'forwards'
-                });
-
-                this.anim.onfinish = () => {
-                    if (this.element.parentNode) {
-                        this.element.parentNode.removeChild(this.element);
-                        if(alvoAtual === this) desativarAlvo();
-                    }
-                };
+                this.anim = this.element.animate(route, { duration: 15000, fill: 'forwards' });
+                this.anim.onfinish = () => { if(this.element.parentNode) this.element.parentNode.removeChild(this.element); if(alvoAtual===this) desativarAlvo(); };
             }
         }
 
-        setInterval(() => {
-            if (document.querySelectorAll('.npc').length < 12) {
-                new NPC();
-            }
-        }, 2500);
+        setInterval(() => { if (document.querySelectorAll('.npc').length < 10) new NPC(); }, 2000);
 
-        for(let i=0; i<6; i++) {
-            setTimeout(() => new NPC(), i * 800);
-        }
-
-        // 4. LÓGICA DE INTERAÇÃO
+        // --- 4. INTERAÇÃO E REGRAS ---
         function focarAlvo(npcData, wrapperElement) {
-            if (alvoAtual && alvoAtual !== npcData) {
-                alvoAtual.anim.play();
-                alvoAtual.element.classList.remove('targeted');
+            // Impede selecionar um zumbi já processado (opcional, mas evita bugs de re-clique)
+            if(npcData.emojiNode.classList.contains('zombie-effect')) return;
+
+            if (alvoAtual && alvoAtual !== npcData && alvoAtual.anim.playState !== 'finished') {
+                alvoAtual.anim.play(); alvoAtual.element.classList.remove('targeted');
             }
-
             wrapperElement.classList.add('targeted');
-            alvoAtual = npcData;
-            excedenteExtraido = false;
+            alvoAtual = npcData; acaoExecutada = false; npcData.anim.pause();
 
-            npcData.anim.pause();
-
-            divConsciente.innerHTML = `
-                <div class="log-entry"><span class="key">Nome:</span> <span class="val">${npcData.nome}</span></div>
-                <div class="log-entry"><span class="key">Idade:</span> <span class="val">${npcData.idade} anos</span></div>
-                <div class="log-entry"><span class="key">Profissão:</span> <span class="val">${npcData.profissao}</span></div>
-            `;
-
-            let htmlExcedente = '';
-            npcData.dadosAtivos.forEach(key => {
-                htmlExcedente += `<div class="log-entry"><span class="key">${key}:</span> <span class="val">${npcData.excedente[key]}</span></div>`;
-            });
-            divExcedente.innerHTML = htmlExcedente;
-            divExcedente.className = 'hidden-data';
+            divConsciente.innerHTML = `<div class="log-entry"><span class="key">ID:</span> <span class="val">${npcData.nome}</span></div><div class="log-entry"><span class="key">Perfil:</span> <span class="val">${npcData.profissao}, ${npcData.idade}a</span></div>`;
             
-            btnExtrair.disabled = false;
-            btnExtrair.innerText = "EXTRAIR EXCEDENTE";
-            btnExtrair.style.backgroundColor = "var(--text-alert)";
+            let htmlExcedente = '';
+            npcData.dadosAtivos.forEach(k => htmlExcedente += `<div class="log-entry"><span class="key">${k}:</span> <span class="val">${npcData.excedente[k]}</span></div>`);
+            divExcedente.innerHTML = htmlExcedente;
+            
+            btnAcao.disabled = false;
+            
+            if (faseAtual === 1) {
+                divExcedente.className = 'hidden-data'; btnAcao.innerText = "EXTRAIR DADOS"; btnAcao.style.backgroundColor = "var(--text-alert)";
+            } else if (faseAtual === 2) {
+                divExcedente.className = 'revealed-data'; btnAcao.innerText = "VENDER PREVISÃO"; btnAcao.style.backgroundColor = "var(--text-warning)";
+            } else if (faseAtual === 3) {
+                divExcedente.className = 'revealed-data'; btnAcao.innerText = contratoAtivo.nudgeMsg || "ENVIAR NUDGE"; btnAcao.style.backgroundColor = "var(--text-nudge)";
+            }
         }
 
         function desativarAlvo() {
-            if (alvoAtual) {
-                alvoAtual.anim.play(); 
-                alvoAtual.element.classList.remove('targeted');
-            }
-            alvoAtual = null;
-            divConsciente.innerHTML = 'Aguardando seleção de alvo...';
-            divExcedente.innerHTML = 'Nenhum alvo selecionado.';
-            divExcedente.className = 'hidden-data';
-            btnExtrair.disabled = true;
-            btnExtrair.innerText = "EXTRAIR EXCEDENTE";
-            btnExtrair.style.backgroundColor = "var(--text-alert)";
+            if (alvoAtual && alvoAtual.anim.playState !== 'finished') { alvoAtual.anim.play(); alvoAtual.element.classList.remove('targeted'); }
+            alvoAtual = null; divConsciente.innerHTML = 'Aguardando seleção...'; divExcedente.innerHTML = 'Nenhum alvo selecionado.'; divExcedente.className = 'hidden-data';
+            btnAcao.disabled = true; btnAcao.innerText = "AGUARDANDO ALVO"; btnAcao.style.backgroundColor = "#475569";
         }
 
         gameArea.addEventListener('click', desativarAlvo);
 
-        btnExtrair.addEventListener('click', () => {
-            if (alvoAtual && !excedenteExtraido) {
-                divExcedente.classList.remove('hidden-data');
-                divExcedente.classList.add('revealed-data');
-                
-                score += Math.floor(Math.random() * 50) + 10;
-                scoreDisplay.innerText = `${score} YB (Yottabytes)`;
-                
-                excedenteExtraido = true;
-                btnExtrair.disabled = true;
-                btnExtrair.innerText = "DADOS VENDIDOS AO MERCADO FUTURO";
-                btnExtrair.style.backgroundColor = "var(--text-success)";
+        btnAcao.addEventListener('click', () => {
+            if (!alvoAtual || acaoExecutada) return;
+
+            if (faseAtual === 1) {
+                divExcedente.classList.replace('hidden-data', 'revealed-data');
+                scoreYB += 50; document.getElementById('score-display').innerText = `${scoreYB} YB`;
+                btnAcao.innerText = "COLETADO"; btnAcao.style.backgroundColor = "var(--text-success)"; acaoExecutada = true; btnAcao.disabled = true;
+                if (scoreYB >= META_FASE_1) setTimeout(() => { modalOverlay.style.display = 'flex'; document.getElementById('modal-fase2').style.display = 'block'; }, 500);
+            } 
+            else if (faseAtual === 2) {
+                if (contratoAtivo.validador(alvoAtual)) {
+                    lucro += contratoAtivo.valor; atualizarLucro();
+                    btnAcao.innerText = "VENDIDO!"; btnAcao.style.backgroundColor = "var(--text-success)"; acaoExecutada = true; btnAcao.disabled = true;
+                    
+                    // EFEITO ZUMBI NA FASE 2
+                    let npcZumbificado = alvoAtual; // Salva referência antes de desativar
+                    setTimeout(() => { 
+                        if(npcZumbificado) {
+                            npcZumbificado.emojiNode.classList.add('zombie-effect');
+                            npcZumbificado.anim.playbackRate = 0.4; // Desacelera a caminhada a 40%
+                        }
+                        desativarAlvo(); 
+                        gerarNovoContrato(); 
+                    }, 1000);
+
+                    if (lucro >= META_FASE_2) setTimeout(() => { modalOverlay.style.display = 'flex'; document.getElementById('modal-fase3').style.display = 'block'; }, 500);
+                } else { btnAcao.innerText = "ALVO ERRADO"; btnAcao.style.backgroundColor = "#475569"; acaoExecutada = true; btnAcao.disabled = true; }
+            }
+            else if (faseAtual === 3) {
+                if (contratoAtivo.validador(alvoAtual)) {
+                    acaoExecutada = true; btnAcao.disabled = true;
+                    btnAcao.innerText = "ROTA ALTERADA!"; btnAcao.style.backgroundColor = "var(--text-success)";
+                    
+                    let rect = alvoAtual.element.getBoundingClientRect();
+                    let parentRect = gameArea.getBoundingClientRect();
+                    let currentX = ((rect.left - parentRect.left + (rect.width/2)) / parentRect.width) * 100;
+                    let currentY = ((rect.top - parentRect.top + (rect.height/2)) / parentRect.height) * 100;
+
+                    alvoAtual.anim.cancel(); 
+                    alvoAtual.emojiNode.classList.add('nudge-effect');
+                    
+                    let cx = contratoAtivo.corner.left; let cy = contratoAtivo.corner.top;
+                    let dx = contratoAtivo.destino.left; let dy = contratoAtivo.destino.top;
+
+                    let dist1 = Math.abs(cx - currentX);
+                    let dist2 = Math.abs(cy - currentY);
+                    let dist3 = Math.sqrt(Math.pow(dx - cx, 2) + Math.pow(dy - cy, 2));
+                    let totalDist = dist1 + dist2 + dist3;
+
+                    let t1 = totalDist > 0 ? (dist1 / totalDist) : 0;
+                    let t2 = totalDist > 0 ? ((dist1 + dist2) / totalDist) : 0;
+                    
+                    if (t1 === 0) t1 = 0.01; if (t2 <= t1) t2 = t1 + 0.01; if (t2 >= 1) t2 = 0.99;
+
+                    let durationNudge = Math.max(1500, (totalDist / 100) * 8000);
+
+                    alvoAtual.anim = alvoAtual.element.animate([
+                        { offset: 0, left: currentX + '%', top: currentY + '%', opacity: 1, transform: 'translate(-50%, -50%) scale(1.1)' },
+                        { offset: t1, left: cx + '%', top: currentY + '%', opacity: 1, transform: 'translate(-50%, -50%) scale(1.1)' },
+                        { offset: t2, left: cx + '%', top: cy + '%', opacity: 1, transform: 'translate(-50%, -50%) scale(1.1)' },
+                        { offset: 1, left: dx + '%', top: dy + '%', opacity: 0, transform: 'translate(-50%, -50%) scale(0.2)' }
+                    ], { duration: durationNudge, fill: 'forwards', easing: 'linear' });
+
+                    alvoAtual.anim.onfinish = () => {
+                        lucro += contratoAtivo.valor; atualizarLucro();
+                        nudgesBemSucedidos++;
+                        desativarAlvo();
+                        if (nudgesBemSucedidos >= 3) { setTimeout(finalizarJogo, 1000); } else { gerarNovoContrato(); }
+                    };
+                } else { btnAcao.innerText = "GATILHO INÚTIL NESTE ALVO"; btnAcao.style.backgroundColor = "#475569"; acaoExecutada = true; btnAcao.disabled = true; }
             }
         });
+
+        function atualizarLucro() {
+            let el = document.getElementById('lucro-display');
+            el.innerText = `$ ${lucro.toFixed(2)}`;
+            el.style.color = "var(--text-success)";
+            setTimeout(() => el.style.color = "var(--text-warning)", 500);
+        }
+
+        // --- 5. TRANSIÇÕES ---
+        function iniciarFase2() {
+            faseAtual = 2; modalOverlay.style.display = 'none'; document.getElementById('modal-fase2').style.display = 'none';
+            document.getElementById('fase-display').innerText = "FASE 2: PREVISÃO"; document.getElementById('fase-display').style.color = "var(--text-warning)";
+            document.getElementById('contrato-box').style.display = 'block'; document.getElementById('score-display').style.display = 'none'; document.getElementById('lucro-display').style.display = 'block';
+            desativarAlvo(); gerarNovoContrato();
+        }
+
+        function iniciarFase3() {
+            faseAtual = 3; modalOverlay.style.display = 'none'; document.getElementById('modal-fase3').style.display = 'none';
+            document.getElementById('fase-display').innerText = "FASE 3: NUDGE"; document.getElementById('fase-display').style.color = "var(--text-nudge)";
+            document.getElementById('titulo-contrato').innerText = "Contrato de Modificação"; document.getElementById('contrato-box').style.borderColor = "var(--text-nudge)";
+            desativarAlvo(); gerarNovoContrato();
+        }
+
+        function finalizarJogo() {
+            modalOverlay.style.display = 'flex';
+            document.getElementById('final-screen').style.display = 'block';
+        }
     </script>
 </body>
 </html>
