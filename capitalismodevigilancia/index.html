@@ -40,7 +40,6 @@
         .npc.targeted .emoji-inner { filter: drop-shadow(0 0 20px var(--text-alert)); transform: scale(1.3) !important; }
         .npc.targeted { z-index: 20; }
 
-        /* EFEITOS DE ESTADO DOS NPCs */
         .nudge-effect { filter: drop-shadow(0 0 30px var(--text-nudge)) !important; transform: scale(1.1) !important; }
         .zombie-effect { filter: grayscale(100%) opacity(0.5) blur(0.5px) !important; transition: all 1.5s ease; }
 
@@ -67,7 +66,7 @@
         .hidden-data { color: var(--text-alert); filter: blur(4px); transition: filter 0.5s ease; }
         .revealed-data { filter: blur(0); color: var(--text-success); }
         
-        #btn-acao { background-color: var(--text-alert); color: white; border: none; padding: 15px; font-family: inherit; font-size: 1rem; font-weight: bold; cursor: pointer; border-radius: 5px; margin-top: auto; transition: background 0.3s; }
+        #btn-acao { background-color: var(--text-alert); color: white; border: none; padding: 15px; font-family: inherit; font-size: 0.95rem; font-weight: bold; cursor: pointer; border-radius: 5px; margin-top: auto; transition: background 0.3s; }
         #btn-acao:hover { background-color: #e11d48; filter: brightness(1.2); }
         #btn-acao:disabled { background-color: #475569; cursor: not-allowed; color: #94a3b8; }
 
@@ -142,14 +141,14 @@
     </div>
 
     <div id="dashboard">
-        <h1>DATACORP OS v3.5</h1>
+        <h1>DATACORP OS v3.7</h1>
         
         <div class="status-box">
             <div class="dash-header-row">
                 <div class="data-title">Banco de Dados</div>
                 <div id="fase-display">FASE 1: EXTRAÇÃO</div>
             </div>
-            <div id="score-display">0 YB (Yottabytes)</div>
+            <div id="score-display">0 GB (Gigabytes)</div>
             <div id="lucro-display">$ 0,00</div>
         </div>
 
@@ -204,8 +203,12 @@
         ];
 
         let faseAtual = 1;
-        let scoreYB = 0; let lucro = 0; let nudgesBemSucedidos = 0;
-        const META_FASE_1 = 200; const META_FASE_2 = 1500; 
+        let scoreDados = 0; let lucro = 0; let nudgesBemSucedidos = 0;
+        
+        // Meta de 150GB para transitar da Fase 1 (Aprox. 4 a 6 pessoas coletadas)
+        const META_FASE_1 = 150; 
+        const META_FASE_2 = 1500; 
+        
         let alvoAtual = null; let acaoExecutada = false; let contratoAtivo = null;
 
         const gameArea = document.getElementById('game-area');
@@ -276,6 +279,8 @@
                 let qtdDados = Math.floor(Math.random() * 5) + 2;
                 this.dadosAtivos = Object.keys(this.excedente).sort(() => 0.5 - Math.random()).slice(0, qtdDados);
 
+                this.extraido = false;
+
                 if (contratoAtivo && Math.random() > 0.3) {
                     if(contratoAtivo.cliente === "Rede Fast Food" && faseAtual===3) { this.excedente["Almoço Ontem"] = 'Ar do ambiente (está de dieta)'; this.dadosAtivos[0] = "Almoço Ontem"; }
                     if(contratoAtivo.cliente === "Farmácia Vida+") { this.excedente["Biometria"] = '120 bpm (ansiedade alta)'; this.dadosAtivos[0] = "Biometria"; }
@@ -304,7 +309,6 @@
 
         // --- 4. INTERAÇÃO E REGRAS ---
         function focarAlvo(npcData, wrapperElement) {
-            // Impede selecionar um zumbi já processado (opcional, mas evita bugs de re-clique)
             if(npcData.emojiNode.classList.contains('zombie-effect')) return;
 
             if (alvoAtual && alvoAtual !== npcData && alvoAtual.anim.playState !== 'finished') {
@@ -313,7 +317,7 @@
             wrapperElement.classList.add('targeted');
             alvoAtual = npcData; acaoExecutada = false; npcData.anim.pause();
 
-            divConsciente.innerHTML = `<div class="log-entry"><span class="key">ID:</span> <span class="val">${npcData.nome}</span></div><div class="log-entry"><span class="key">Perfil:</span> <span class="val">${npcData.profissao}, ${npcData.idade}a</span></div>`;
+            divConsciente.innerHTML = `<div class="log-entry"><span class="key">Nome:</span> <span class="val">${npcData.nome}</span></div><div class="log-entry"><span class="key">Perfil:</span> <span class="val">${npcData.profissao}, ${npcData.idade}a</span></div>`;
             
             let htmlExcedente = '';
             npcData.dadosAtivos.forEach(k => htmlExcedente += `<div class="log-entry"><span class="key">${k}:</span> <span class="val">${npcData.excedente[k]}</span></div>`);
@@ -322,7 +326,16 @@
             btnAcao.disabled = false;
             
             if (faseAtual === 1) {
-                divExcedente.className = 'hidden-data'; btnAcao.innerText = "EXTRAIR DADOS"; btnAcao.style.backgroundColor = "var(--text-alert)";
+                if (npcData.extraido) {
+                    divExcedente.className = 'revealed-data'; 
+                    btnAcao.innerText = "JÁ SUGAMOS TUDO. PROCURE OUTRO."; 
+                    btnAcao.style.backgroundColor = "#475569";
+                    btnAcao.disabled = true;
+                } else {
+                    divExcedente.className = 'hidden-data'; 
+                    btnAcao.innerText = "EXTRAIR DADOS"; 
+                    btnAcao.style.backgroundColor = "var(--text-alert)";
+                }
             } else if (faseAtual === 2) {
                 divExcedente.className = 'revealed-data'; btnAcao.innerText = "VENDER PREVISÃO"; btnAcao.style.backgroundColor = "var(--text-warning)";
             } else if (faseAtual === 3) {
@@ -343,21 +356,31 @@
 
             if (faseAtual === 1) {
                 divExcedente.classList.replace('hidden-data', 'revealed-data');
-                scoreYB += 50; document.getElementById('score-display').innerText = `${scoreYB} YB`;
-                btnAcao.innerText = "COLETADO"; btnAcao.style.backgroundColor = "var(--text-success)"; acaoExecutada = true; btnAcao.disabled = true;
-                if (scoreYB >= META_FASE_1) setTimeout(() => { modalOverlay.style.display = 'flex'; document.getElementById('modal-fase2').style.display = 'block'; }, 500);
+                
+                // MUDANÇA: Quantidade coletada aleatória (15 a 65 GB)
+                let extraidoAgora = Math.floor(Math.random() * 50) + 15;
+                scoreDados += extraidoAgora; 
+                
+                document.getElementById('score-display').innerText = `${scoreDados} GB`;
+                btnAcao.innerText = `COLETADO (+${extraidoAgora} GB)`; 
+                btnAcao.style.backgroundColor = "var(--text-success)"; 
+                
+                acaoExecutada = true; 
+                btnAcao.disabled = true;
+                alvoAtual.extraido = true; 
+                
+                if (scoreDados >= META_FASE_1) setTimeout(() => { modalOverlay.style.display = 'flex'; document.getElementById('modal-fase2').style.display = 'block'; }, 800);
             } 
             else if (faseAtual === 2) {
                 if (contratoAtivo.validador(alvoAtual)) {
                     lucro += contratoAtivo.valor; atualizarLucro();
                     btnAcao.innerText = "VENDIDO!"; btnAcao.style.backgroundColor = "var(--text-success)"; acaoExecutada = true; btnAcao.disabled = true;
                     
-                    // EFEITO ZUMBI NA FASE 2
-                    let npcZumbificado = alvoAtual; // Salva referência antes de desativar
+                    let npcZumbificado = alvoAtual; 
                     setTimeout(() => { 
                         if(npcZumbificado) {
                             npcZumbificado.emojiNode.classList.add('zombie-effect');
-                            npcZumbificado.anim.playbackRate = 0.4; // Desacelera a caminhada a 40%
+                            npcZumbificado.anim.playbackRate = 0.4; 
                         }
                         desativarAlvo(); 
                         gerarNovoContrato(); 
