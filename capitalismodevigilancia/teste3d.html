@@ -116,7 +116,7 @@
     </div>
 
     <div id="dashboard">
-        <h1>DATACORP OS v11 (Big Data)</h1>
+        <h1>DATACORP OS v11.1</h1>
         <div class="status-box">
             <div class="dash-header-row">
                 <div class="data-title">Banco de Dados</div>
@@ -179,7 +179,7 @@
             }
         }
 
-        // --- 1. DADOS DE JOGO E BANCO DE DADOS RICO ---
+        // --- 1. DADOS DE JOGO ---
         setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString(); }, 1000);
         
         const arquetipos = [
@@ -192,9 +192,8 @@
             { tipo: '👩‍⚕️', profissoes: ['Enfermeira', 'Médica'], min: 25, max: 60 }
         ];
 
-        // O Super Banco de Dados Excedente com informações cômicas e invasivas
         const bancoDeDadosExcedente = {
-            "Almoço Ontem": ['Ar do ambiente (está de dieta)', 'Dogão da esquina', 'Resto de ontem (micro-ondas)', 'Sushi gourmet hiperfaturado'],
+            "Almoço Ontem": ['Ar do ambiente (está de dieta)', 'Dogão da esquina', 'Resto de ontem', 'Sushi gourmet hiperfaturado'],
             "Café da Manhã": ['Não tomou (acordou atrasado)', 'Suco verde de aparência suspeita', 'Pão na chapa com pingado'],
             "Saldo Bancário": ['R$ -450,20 (No Cheque Especial)', 'Esperando o vale cair...', 'R$ 2,50 (esquecidos)', 'Ostentando (R$ 1500)'],
             "Segredo Íntimo": ['Sofre com mau hálito', 'Chorou no banho hoje', 'A senha do banco é "123456"', 'Esqueceu o aniversário da mãe'],
@@ -236,7 +235,7 @@
         sunLight.shadow.mapSize.height = 1024;
         scene.add(sunLight);
 
-        // --- 3. AMBIENTE URBANO ---
+        // --- 3. AMBIENTE URBANO SEM SOBREPOSIÇÕES ---
         const roadMat = new THREE.MeshLambertMaterial({ color: 0x222222 });
         const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), roadMat);
         ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
@@ -246,22 +245,40 @@
             new THREE.MeshLambertMaterial({ color: 0x334155 })
         ];
 
+        // Lógica matematicamente perfeita para evitar o canto das lojas alvo
         function buildComplexBlock(centerX, centerZ, w, d) {
             const sidewalk = new THREE.Mesh(new THREE.BoxGeometry(w + 12, 1, d + 12), new THREE.MeshLambertMaterial({ color: 0x555555 }));
             sidewalk.position.set(centerX, 0.5, centerZ); sidewalk.receiveShadow = true; scene.add(sidewalk);
             
-            for(let i=0; i<2; i++) {
-                let bw = (w / 2) - 2; let bd = (d / 2) - 2; let bh = Math.random() * 20 + 15;
-                let b = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), bMats[i%2]);
-                let ox = (Math.random() > 0.5 ? 1 : -1) * (bw/2 + 10); let oz = (Math.random() > 0.5 ? 1 : -1) * (bd/2 + 10);
-                b.position.set(centerX + ox, bh/2 + 1, centerZ + oz); b.castShadow = true; b.receiveShadow = true; scene.add(b);
-            }
+            // Divide a área do quarteirão em 4 quadrantes internos
+            const offsets = [
+                {x: -15, z: -15}, {x: 15, z: -15},
+                {x: -15, z: 15},  {x: 15, z: 15}
+            ];
+
+            offsets.forEach(off => {
+                let bx = centerX + off.x;
+                let bz = centerZ + off.z;
+
+                // Descobre se este quadrante é o que está mais próximo da origem (0,0) do cruzamento
+                let isInnerCorner = (Math.sign(centerX) !== Math.sign(off.x)) && (Math.sign(centerZ) !== Math.sign(off.z));
+
+                // Se NÃO for a esquina interior, constrói um prédio cinzento
+                if (!isInnerCorner) {
+                    let bw = 20; let bd = 20; let bh = Math.random() * 20 + 15;
+                    let mat = bMats[Math.floor(Math.random() * bMats.length)];
+                    let b = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), mat);
+                    b.position.set(bx, bh/2 + 1, bz);
+                    b.castShadow = true; b.receiveShadow = true; scene.add(b);
+                }
+            });
         }
         
         buildComplexBlock(-50, -50, 50, 50); buildComplexBlock(50, -50, 50, 50);  
         buildComplexBlock(-50, 50, 50, 50);  buildComplexBlock(50, 50, 50, 50);   
 
-        function createLandmarkBuilding(cx, cz, hexColor, emojiIcon) {
+        function createLandmarkBuilding(cx, cz, hexColor) {
+            // A loja agora tem espaço livre e não fica sobreposta!
             const geo = new THREE.BoxGeometry(16, 22, 16);
             const mat = new THREE.MeshLambertMaterial({ color: hexColor });
             const b = new THREE.Mesh(geo, mat);
@@ -275,10 +292,11 @@
             return b;
         }
 
-        createLandmarkBuilding(-35, -35, 0xef4444, '🍔');
-        createLandmarkBuilding(35, -35, 0xec4899, '👗');
-        createLandmarkBuilding(-35, 35, 0x10b981, '💊');
-        createLandmarkBuilding(35, 35, 0x3b82f6, '🏦');
+        // As lojas âncora nas esquinas perfeitas
+        createLandmarkBuilding(-35, -35, 0xef4444); // Fast Food
+        createLandmarkBuilding(35, -35, 0xec4899);  // Loja
+        createLandmarkBuilding(-35, 35, 0x10b981);  // Farmácia
+        createLandmarkBuilding(35, 35, 0x3b82f6);   // Banco
 
         function addZebraCrosswalk(cx, cz, rot) {
             const group = new THREE.Group();
@@ -337,10 +355,8 @@
 
             car.userData = {
                 brakeLights: taillights.material,
-                axis: lane <= 1 ? 'X' : 'Z',
-                dir: (lane === 1 || lane === 3) ? -1 : 1,
-                baseSpeed: 0.6,
-                willTurnRight: willTurnRight, turnState: 0 
+                axis: lane <= 1 ? 'X' : 'Z', dir: (lane === 1 || lane === 3) ? -1 : 1,
+                baseSpeed: 0.6, willTurnRight: willTurnRight, turnState: 0 
             };
 
             if(lane === 0) { car.position.set(-100, 1, 6); car.rotation.y = Math.PI/2; }
@@ -350,9 +366,9 @@
             
             car.userData.speed = car.userData.baseSpeed; scene.add(car); cars.push(car);
         }
-        setInterval(() => { if(cars.length < 12 && !isPaused) spawnCar(); }, 2500);
+        setInterval(() => { if(cars.length < 8 && !isPaused) spawnCar(); }, 3500);
 
-        // --- 6. REDE DE CÂMERAS PTZ (Reduzida para apenas 2: Sul e Norte) ---
+        // --- 6. REDE DE CÂMERAS PTZ ---
         const cameraNetwork = [
             { name: "REDE DATACORP - CÂMARA 01 (SUL)", pos: {x: 0, y: 15, z: 65}, basePan: 0, baseTilt: -0.15 },
             { name: "REDE DATACORP - CÂMARA 02 (NORTE)", pos: {x: 0, y: 15, z: -65}, basePan: Math.PI, baseTilt: -0.15 }
@@ -410,12 +426,11 @@
 
         window.addEventListener('keydown', (e) => {
             initAudio();
-            // Atalhos atualizados para as 2 câmaras
             if(e.key === '1') switchCam(0); if(e.key === '2') switchCam(1); 
             if (e.code === 'Space' || e.key === 'e' || e.key === 'E') { e.preventDefault(); if (!btnAcao.disabled) btnAcao.click(); }
         });
 
-        // --- 7. SISTEMA DE NPCs (Geração de Dados Ricos) ---
+        // --- 7. SISTEMA DE NPCs ---
         const npcs = []; const npcBodies = []; 
         const sharedBodyGeo = new THREE.CylinderGeometry(0.7, 0.9, 3.2, 8); 
         const sharedHeadGeo = new THREE.SphereGeometry(0.6, 8, 8); 
@@ -436,14 +451,10 @@
             const emojiSprite = getEmojiSprite(arq.tipo); emojiSprite.position.y = 5.2 + 1; emojiSprite.scale.set(3, 3, 1);
             group.add(body); group.add(head); group.add(emojiSprite);
             
-            // Geração de Dados Aleatórios e Cômicos da Ficha
             let excedenteGerado = {};
-            let qtdDados = Math.floor(Math.random() * 3) + 3; // 3 a 5 dados
+            let qtdDados = Math.floor(Math.random() * 3) + 3; 
             let chavesDisponiveis = Object.keys(bancoDeDadosExcedente).sort(() => 0.5 - Math.random()).slice(0, qtdDados);
-            
-            chavesDisponiveis.forEach(k => {
-                excedenteGerado[k] = bancoDeDadosExcedente[k][Math.floor(Math.random() * bancoDeDadosExcedente[k].length)];
-            });
+            chavesDisponiveis.forEach(k => { excedenteGerado[k] = bancoDeDadosExcedente[k][Math.floor(Math.random() * bancoDeDadosExcedente[k].length)]; });
             
             const route = pRoutes[Math.floor(Math.random() * pRoutes.length)];
             
@@ -457,10 +468,8 @@
                 bodyMesh: body, headMesh: head,
                 axis: route.axis, dirX: Math.sign(route.ex - route.sx), dirZ: Math.sign(route.ez - route.sz)
             };
-            group.userData.speed = group.userData.baseSpeed;
-            group.position.set(route.sx, 0, route.sz);
+            group.userData.speed = group.userData.baseSpeed; group.position.set(route.sx, 0, route.sz);
 
-            // Injeção forçada de gatilhos se houver contrato
             if(contratoAtivo && Math.random() > 0.4) {
                 if(contratoAtivo.cliente === "Rede Fast Food") group.userData.excedente["Almoço Ontem"] = 'Ar do ambiente (está de dieta)';
                 else if(contratoAtivo.cliente === "AgiotaBank") group.userData.excedente["Pesquisa Recente"] = '"Como pedir empréstimo sem fiador"';
@@ -480,7 +489,7 @@
             npcGroup.userData.bodyMesh.material.dispose();
         }
 
-        // --- 8. LÓGICA DE JOGO E VALIDADORES ---
+        // --- 8. LÓGICA DE JOGO ---
         function handleRaycastHover() {
             raycaster.setFromCamera(mouseVector, camera);
             const intersects = raycaster.intersectObjects(npcBodies);
@@ -513,7 +522,6 @@
                 <div class="log-entry"><span class="key">ID:</span> <span class="val">${group.userData.id}</span></div>
                 <div class="log-entry"><span class="key">Perfil:</span> <span class="val">${group.userData.profissao}, ${group.userData.idade}a</span></div>`;
             
-            // Montagem da Ficha Completa
             let htmlExcedente = '';
             for (const [key, value] of Object.entries(group.userData.excedente)) {
                 htmlExcedente += `<div class="log-entry"><span class="key">${key}:</span> <span class="val">${value}</span></div>`;
@@ -539,7 +547,6 @@
             btnAcao.disabled = true; btnAcao.innerText = "AGUARDANDO ALVO"; btnAcao.style.background = "#475569";
         }
 
-        // Validador varre todos os valores do dicionário para ver se a "palavra-chave" está lá
         const checkRisk = (n, word) => Object.values(n.userData.excedente).some(v => typeof v === 'string' && v.includes(word));
 
         const contratosFase2 = [{ cliente: "Seguradora", desc: "Ache perfis de risco (Ansiedade/Esgotamento).", validador: (n) => checkRisk(n, 'ansiedade') || checkRisk(n, 'esgotamento'), valor: 800 }];
@@ -587,8 +594,7 @@
                     playSound('nudge'); btnAcao.innerText = "MANIPULAÇÃO ATIVA!"; btnAcao.disabled = true;
                     alvo.userData.isNudging = true; 
                     alvo.userData.speed = 0.02;
-                    alvo.userData.bodyMesh.material.emissive.setHex(0xa855f7); 
-                    alvo.userData.headMesh.material.emissive.setHex(0xa855f7); 
+                    alvo.userData.bodyMesh.material.emissive.setHex(0xa855f7); alvo.userData.headMesh.material.emissive.setHex(0xa855f7); 
                     alvo.children[2].material.opacity = 0.5; 
 
                     alvo.userData.nudgePath = [{ x: contratoAtivo.corner.x, z: contratoAtivo.corner.z }, { x: contratoAtivo.dest.x, z: contratoAtivo.dest.z }];
