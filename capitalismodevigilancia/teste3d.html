@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DataCorp 3D: O Excedente</title>
+    <style>
+        :root {
+            --bg-color: #0f172a; --panel-bg: #1e293b; --text-main: #38bdf8;
+            --text-alert: #f43f5e; --text-success: #10b981; --border-color: #334155;
+        }
+
+        body { margin: 0; padding: 0; font-family: 'Courier New', Courier, monospace; background-color: var(--bg-color); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
+
+        /* A área 3D vai ocupar este espaço */
+        #game-area { flex: 1; position: relative; border-right: 2px solid var(--border-color); overflow: hidden; }
+
+        .scanline { position: absolute; width: 100%; height: 100%; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%); background-size: 100% 4px; pointer-events: none; z-index: 50; }
+        .camera-ui { position: absolute; top: 20px; left: 20px; z-index: 51; font-size: 14px; color: rgba(56, 189, 248, 0.9); text-shadow: 0 0 5px var(--text-main); pointer-events: none; }
+        .controls-hint { position: absolute; bottom: 20px; left: 20px; z-index: 51; font-size: 12px; color: #94a3b8; pointer-events: none; }
+
+        /* Dashboard de Controlo (mantido igual) */
+        #dashboard { width: 350px; background-color: var(--panel-bg); padding: 20px; display: flex; flex-direction: column; box-shadow: -5px 0 15px rgba(0,0,0,0.5); z-index: 60; }
+        h1 { font-size: 1.2rem; text-align: center; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-top: 0; color: #fff; }
+        .status-box { background-color: #0f172a; border: 1px solid var(--border-color); padding: 15px; margin-bottom: 20px; border-radius: 5px; }
+        .dash-header-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin-bottom: 12px; }
+        .dash-header-row .data-title { margin-bottom: 0; }
+        #fase-display { font-weight: bold; color: var(--text-main); font-size: 0.85rem; text-align: right; }
+        .data-title { font-size: 0.9rem; color: #94a3b8; margin-bottom: 5px; text-transform: uppercase; }
+        #score-display { font-size: 1.4rem; color: var(--text-success); font-weight: bold; text-align: center; margin: 5px 0; }
+        
+        #dados-conscientes, #dados-excedentes { min-height: 80px; font-size: 0.9rem; }
+        .hidden-data { color: var(--text-alert); filter: blur(4px); transition: filter 0.5s ease; }
+        .revealed-data { filter: blur(0); color: var(--text-success); }
+        
+        #btn-acao { background-color: var(--text-alert); color: white; border: none; padding: 15px; font-family: inherit; font-size: 0.95rem; font-weight: bold; cursor: pointer; border-radius: 5px; margin-top: auto; transition: background 0.3s; }
+        #btn-acao:hover { background-color: #e11d48; filter: brightness(1.2); }
+        #btn-acao:disabled { background-color: #475569; cursor: not-allowed; color: #94a3b8; }
+        
+        .log-entry { margin-bottom: 8px; } .key { color: #cbd5e1; } .val { color: #fcd34d; }
+    </style>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+    <div id="game-area">
+        <div class="scanline"></div>
+        <div class="camera-ui">
+            SISTEMA DATACORP - CÂMARA PTZ 3D<br>
+            LOCAL: ZONA COMERCIAL<br>
+            <span id="clock" style="color: #f43f5e;">00:00:00 REC</span>
+        </div>
+        <div class="controls-hint">
+            [RATO ESQUERDO] Rodar Câmara | [RATO DIREITO] Mover | [SCROLL] Zoom | [CLIQUE NO BONECO] Selecionar Alvo
+        </div>
+    </div>
+
+    <div id="dashboard">
+        <h1>DATACORP OS v4.0 (3D)</h1>
+        <div class="status-box">
+            <div class="dash-header-row">
+                <div class="data-title">Banco de Dados</div>
+                <div id="fase-display">FASE 1: EXTRAÇÃO</div>
+            </div>
+            <div id="score-display">0 GB (Gigabytes)</div>
+        </div>
+        <div class="status-box">
+            <div class="data-title">Dados Conscientes (Identidade)</div>
+            <div id="dados-conscientes">Aguardando seleção...</div>
+        </div>
+        <div class="status-box">
+            <div class="data-title">Excedente Comportamental (Oculto)</div>
+            <div id="dados-excedentes" class="hidden-data">Nenhum alvo selecionado.</div>
+        </div>
+        <button id="btn-acao" disabled>EXTRAIR EXCEDENTE</button>
+    </div>
+
+    <script>
+        // --- CONFIGURAÇÃO DA UI HTML ---
+        const clockEl = document.getElementById('clock');
+        setInterval(() => { clockEl.innerText = new Date().toLocaleTimeString() + " REC"; }, 1000);
+
+        let alvoAtual = null;
+        let scoreDados = 0;
+        
+        const divConscientes = document.getElementById('dados-conscientes');
+        const divExcedentes = document.getElementById('dados-excedentes');
+        const btnAcao = document.getElementById('btn-acao');
+        const scoreDisplay = document.getElementById('score-display');
+
+        // Dados simulados
+        const profissoes = ['Estudante', 'Professor', 'Contabilista', 'Programador', 'Desempregado'];
+        const segredos = ['Tem dívidas ocultas', 'Pesquisou sobre insónias hoje', 'Ansiedade severa', 'Procura emprego ativamente'];
+
+        // --- 1. CONFIGURAÇÃO BÁSICA DO THREE.JS ---
+        const gameArea = document.getElementById('game-area');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1a2235); // Cor do céu/fundo
+
+        // Câmara
+        const camera = new THREE.PerspectiveCamera(60, gameArea.clientWidth / gameArea.clientHeight, 0.1, 1000);
+        camera.position.set(0, 40, 50); // Posição inicial estilo CCTV
+
+        // Renderizador
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(gameArea.clientWidth, gameArea.clientHeight);
+        renderer.shadowMap.enabled = true;
+        gameArea.appendChild(renderer.domElement);
+
+        // Controlos PTZ (OrbitControls)
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.maxPolarAngle = Math.PI / 2.2; // Não deixa ir para baixo do chão
+        controls.minDistance = 10;
+        controls.maxDistance = 100;
+
+        // --- 2. ILUMINAÇÃO ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0x38bdf8, 0.8);
+        dirLight.position.set(20, 50, 20);
+        dirLight.castShadow = true;
+        scene.add(dirLight);
+
+        // --- 3. CONSTRUÇÃO DO CENÁRIO (A Cidade) ---
+        // O Chão (Rua)
+        const groundGeo = new THREE.PlaneGeometry(200, 200);
+        const groundMat = new THREE.MeshStandardMaterial({ color: 0x262c3a });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        // Quarteirões (Passeios/Prédios base)
+        function createBlock(x, z, w, d, color) {
+            const geo = new THREE.BoxGeometry(w, 2, d);
+            const mat = new THREE.MeshStandardMaterial({ color: color });
+            const block = new THREE.Mesh(geo, mat);
+            block.position.set(x, 1, z);
+            block.receiveShadow = true;
+            scene.add(block);
+        }
+        
+        // Quatro quarteirões
+        createBlock(-30, -30, 40, 40, 0x475569); // Top-Left
+        createBlock(30, -30, 40, 40, 0x475569);  // Top-Right
+        createBlock(-30, 30, 40, 40, 0x475569);  // Bottom-Left
+        createBlock(30, 30, 40, 40, 0x475569);   // Bottom-Right
+
+        // --- 4. SISTEMA DE NPCs 3D ---
+        const npcs = []; // Array para guardar os objetos e as lógicas
+        const routes = [
+            { start: {x: -8, z: 50}, end: {x: -8, z: -50} }, // Sobe passeio esquerdo
+            { start: {x: 8, z: -50}, end: {x: 8, z: 50} },   // Desce passeio direito
+            { start: {x: -50, z: -8}, end: {x: 50, z: -8} }, // Esquerda p/ Direita
+            { start: {x: 50, z: 8}, end: {x: -50, z: 8} }    // Direita p/ Esquerda
+        ];
+
+        function createNPC() {
+            // Geometria do "indivíduo" (um cilindro simples simulando um corpo)
+            const geometry = new THREE.CylinderGeometry(1.5, 1.5, 6, 16);
+            const material = new THREE.MeshStandardMaterial({ color: 0xcbd5e1 });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.castShadow = true;
+            
+            // Dados Corporativos do NPC
+            mesh.userData = {
+                id: "Indivíduo #" + Math.floor(Math.random()*9000 + 1000),
+                profissao: profissoes[Math.floor(Math.random()*profissoes.length)],
+                excedente: segredos[Math.floor(Math.random()*segredos.length)],
+                extraido: false,
+                velocidade: Math.random() * 0.1 + 0.05
+            };
+
+            // Escolhe rota aleatória
+            const route = routes[Math.floor(Math.random() * routes.length)];
+            mesh.position.set(route.start.x, 3, route.start.z);
+            mesh.userData.endZ = route.end.z;
+            mesh.userData.endX = route.end.x;
+            
+            // Lógica de direção
+            mesh.userData.dirX = Math.sign(route.end.x - route.start.x);
+            mesh.userData.dirZ = Math.sign(route.end.z - route.start.z);
+
+            scene.add(mesh);
+            npcs.push(mesh);
+        }
+
+        // Gerar NPCs iniciais e num intervalo
+        for(let i=0; i<8; i++) { setTimeout(createNPC, i * 1500); }
+        setInterval(() => { if(npcs.length < 15) createNPC(); }, 3000);
+
+        // --- 5. INTERAÇÃO 3D (RAYCASTER) ---
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        // Converte o clique no ecrã para o espaço 3D
+        gameArea.addEventListener('pointerdown', (event) => {
+            // Calcular posição do rato (de -1 a +1)
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ( ( event.clientX - rect.left ) / ( rect.width ) ) * 2 - 1;
+            mouse.y = - ( ( event.clientY - rect.top ) / ( rect.height ) ) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+
+            // Verifica se o laser "tocou" em algum NPC
+            const intersects = raycaster.intersectObjects(npcs);
+
+            if (intersects.length > 0) {
+                // Focámos num alvo!
+                const alvoMesh = intersects[0].object;
+                focarAlvo(alvoMesh);
+            } else {
+                desativarAlvo();
+            }
+        });
+
+        // Efeito Hover (Muda a cor quando passa o rato)
+        gameArea.addEventListener('pointermove', (event) => {
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ( ( event.clientX - rect.left ) / ( rect.width ) ) * 2 - 1;
+            mouse.y = - ( ( event.clientY - rect.top ) / ( rect.height ) ) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+            
+            const intersects = raycaster.intersectObjects(npcs);
+            
+            // Restaura cor de todos
+            npcs.forEach(n => {
+                if(n !== alvoAtual) {
+                    n.material.color.setHex(n.userData.extraido ? 0x475569 : 0xcbd5e1);
+                    n.material.emissive.setHex(0x000000); // Tira o brilho
+                }
+            });
+
+            // Aplica hover
+            if (intersects.length > 0 && intersects[0].object !== alvoAtual) {
+                intersects[0].object.material.emissive.setHex(0x38bdf8); // Brilho azul
+                document.body.style.cursor = 'crosshair';
+            } else {
+                document.body.style.cursor = 'default';
+            }
+        });
+
+        // Lógica de UI para o alvo
+        function focarAlvo(mesh) {
+            // Tira a cor de destaque do alvo anterior
+            if(alvoAtual && alvoAtual !== mesh) {
+                alvoAtual.material.emissive.setHex(0x000000);
+            }
+
+            alvoAtual = mesh;
+            alvoAtual.material.emissive.setHex(0xf43f5e); // Fica vermelho vivo ao ser focado
+
+            divConscientes.innerHTML = `
+                <div class="log-entry"><span class="key">ID Rastreio:</span> <span class="val">${mesh.userData.id}</span></div>
+                <div class="log-entry"><span class="key">Perfil:</span> <span class="val">${mesh.userData.profissao}</span></div>
+            `;
+            
+            divExcedentes.innerHTML = `<div class="log-entry"><span class="key">Vulnerabilidade:</span> <span class="val">${mesh.userData.excedente}</span></div>`;
+
+            if (mesh.userData.extraido) {
+                divExcedentes.className = 'revealed-data'; 
+                btnAcao.innerText = "DADOS ESGOTADOS"; 
+                btnAcao.style.backgroundColor = "#475569";
+                btnAcao.disabled = true;
+            } else {
+                divExcedentes.className = 'hidden-data'; 
+                btnAcao.innerText = "EXTRAIR DADOS"; 
+                btnAcao.style.backgroundColor = "var(--text-alert)";
+                btnAcao.disabled = false;
+            }
+        }
+
+        function desativarAlvo() {
+            if (alvoAtual) alvoAtual.material.emissive.setHex(0x000000);
+            alvoAtual = null;
+            divConscientes.innerHTML = 'Aguardando seleção...';
+            divExcedentes.innerHTML = 'Nenhum alvo selecionado.';
+            divExcedentes.className = 'hidden-data';
+            btnAcao.disabled = true;
+            btnAcao.innerText = "AGUARDANDO ALVO";
+            btnAcao.style.backgroundColor = "#475569";
+        }
+
+        btnAcao.addEventListener('click', () => {
+            if(!alvoAtual || alvoAtual.userData.extraido) return;
+
+            divExcedentes.classList.replace('hidden-data', 'revealed-data');
+            let extraidoAgora = Math.floor(Math.random() * 50) + 15;
+            scoreDados += extraidoAgora;
+            
+            scoreDisplay.innerText = `${scoreDados} GB`;
+            btnAcao.innerText = `COLETADO (+${extraidoAgora} GB)`; 
+            btnAcao.style.backgroundColor = "var(--text-success)"; 
+            btnAcao.disabled = true;
+            
+            alvoAtual.userData.extraido = true;
+            
+            // Efeito visual no 3D: o boneco "morre/zumbifica", ficando cinzento escuro
+            alvoAtual.material.color.setHex(0x475569);
+            alvoAtual.material.emissive.setHex(0x000000);
+            alvoAtual.userData.velocidade *= 0.3; // Fica muito lento
+        });
+
+        // --- 6. LOOP DE ANIMAÇÃO 3D ---
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Move os NPCs
+            for (let i = npcs.length - 1; i >= 0; i--) {
+                let npc = npcs[i];
+                
+                // Se for o alvoAtual, ele para de andar (trava da câmara)
+                if (npc !== alvoAtual) {
+                    npc.position.x += npc.userData.dirX * npc.userData.velocidade;
+                    npc.position.z += npc.userData.dirZ * npc.userData.velocidade;
+                }
+
+                // Se passou dos limites, apaga da memória (despawn)
+                if (Math.abs(npc.position.x) > 60 || Math.abs(npc.position.z) > 60) {
+                    scene.remove(npc);
+                    npcs.splice(i, 1);
+                }
+            }
+
+            controls.update(); // Atualiza controlos do rato
+            renderer.render(scene, camera); // Desenha o frame
+        }
+
+        // Ajusta a tela quando a janela muda de tamanho
+        window.addEventListener('resize', () => {
+            camera.aspect = gameArea.clientWidth / gameArea.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(gameArea.clientWidth, gameArea.clientHeight);
+        });
+
+        animate(); // Inicia o jogo
+    </script>
+</body>
+</html>
