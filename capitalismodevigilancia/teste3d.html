@@ -19,7 +19,6 @@
         .vignette { position: absolute; width: 100%; height: 100%; box-shadow: 0 0 200px rgba(0,0,0,0.8) inset; pointer-events: none; z-index: 49; }
         .camera-ui { position: absolute; top: 20px; left: 20px; z-index: 51; font-size: 14px; color: rgba(255, 255, 255, 0.8); text-shadow: 0 0 2px #000; pointer-events: none; }
         
-        /* Controles de Câmera UI */
         #cam-controls { position: absolute; top: 85px; left: 20px; z-index: 52; display: flex; gap: 5px; }
         .cam-btn { background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border-color); color: var(--text-main); padding: 5px 10px; font-family: inherit; font-size: 0.8rem; cursor: pointer; border-radius: 3px; transition: all 0.2s; }
         .cam-btn:hover { background: rgba(56, 189, 248, 0.2); }
@@ -70,27 +69,27 @@
     <div id="modal-overlay">
         <div class="modal-content" id="modal-fase2" style="display: none;">
             <div class="modal-title">ATUALIZAÇÃO: FASE 2</div>
-            <p>Os servidores estão cheios de dados e a vigilância passiva tem custos. Está na hora de gerar lucros.</p>
+            <p>Os servidores estão cheios de dados. Está na hora de gerar lucros.</p>
             <p style="color: var(--text-alert);"><strong>Novo Objetivo: Mercado de Futuros.</strong></p>
-            <p>Venda a certeza do que as pessoas farão. Identifique na multidão os alvos exatos pedidos pelos nossos clientes corporativos.</p>
+            <p>Identifique na multidão os alvos exatos pedidos pelos nossos clientes corporativos e venda a previsão do comportamento deles.</p>
             <button class="modal-btn" onclick="iniciarFase2()">ATIVAR PREVISÃO</button>
         </div>
         <div class="modal-content" id="modal-fase3" style="display: none;">
             <div class="modal-title" style="color: var(--text-nudge);">ATUALIZAÇÃO: FASE 3</div>
             <p>Prever é bom, mas <strong>Garantir o resultado</strong> vale muito mais.</p>
             <p style="color: var(--text-nudge);"><strong>Novo Objetivo: Poder Instrumentário (O Nudge).</strong></p>
-            <p>Use os dados para manipular a realidade. Dispare notificações e alertas falsos nos telemóveis dos pedestres para alterar à força a rota física deles até às nossas lojas.</p>
+            <p>Use os dados para disparar notificações manipulativas nos telemóveis dos pedestres, alterando à força a rota física deles até às nossas lojas.</p>
             <button class="modal-btn" onclick="iniciarFase3()" style="background: var(--text-nudge); color: white;">ATIVAR MANIPULAÇÃO</button>
         </div>
         <div class="modal-content" id="final-screen">
             <h2 style="color: #fff; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">FIM DA SIMULAÇÃO</h2>
-            <p style="color: #cbd5e1; font-size: 1.2rem; margin-bottom: 30px;">O sistema cumpriu o seu objetivo. O livre-arbítrio foi automatizado com sucesso.</p>
+            <p style="color: #cbd5e1; font-size: 1.2rem; margin-bottom: 30px;">O livre-arbítrio foi automatizado com sucesso.</p>
             <div class="final-q" style="animation-delay: 1s;">1. Quem sabe?</div>
-            <p style="color: #94a3b8; animation: fadeUp 1s forwards; animation-delay: 1.5s; opacity: 0; margin-top: -10px; margin-bottom: 30px;">(Você sabia as dívidas e medos deles. Eles não sabiam que você os via).</p>
+            <p style="color: #94a3b8; animation: fadeUp 1s forwards; animation-delay: 1.5s; opacity: 0; margin-top: -10px; margin-bottom: 30px;">(Você sabia os medos deles. Eles não sabiam que você os via).</p>
             <div class="final-q" style="animation-delay: 3s;">2. Quem decide?</div>
-            <p style="color: #94a3b8; animation: fadeUp 1s forwards; animation-delay: 3.5s; opacity: 0; margin-top: -10px; margin-bottom: 30px;">(Você decidiu para que loja eles iam, mascarando a manipulação como uma escolha deles).</p>
+            <p style="color: #94a3b8; animation: fadeUp 1s forwards; animation-delay: 3.5s; opacity: 0; margin-top: -10px; margin-bottom: 30px;">(Você decidiu para que loja eles iam, disfarçado de escolha livre).</p>
             <div class="final-q" style="animation-delay: 5s;">3. Quem decide quem decide?</div>
-            <p style="color: #94a3b8; animation: fadeUp 1s forwards; animation-delay: 5.5s; opacity: 0; margin-top: -10px; margin-bottom: 30px;">(Apenas a Corporação. Não houve debate público).</p>
+            <p style="color: #94a3b8; animation: fadeUp 1s forwards; animation-delay: 5.5s; opacity: 0; margin-top: -10px; margin-bottom: 30px;">(A Corporação. Sem qualquer debate democrático).</p>
         </div>
     </div>
 
@@ -114,12 +113,12 @@
         </div>
 
         <div class="controls-hint">
-            [1 ao 4] Mudar Câmera | [RATO] Guiar Câmera | [CLIQUE] Inspecionar | <strong>[ESPAÇO] Ação</strong>
+            [1 ao 4] Câmeras | [RATO] Mover Lente | [SCROLL] Zoom | [CLIQUE] Selecionar | <strong>[ESPAÇO] Ação</strong>
         </div>
     </div>
 
     <div id="dashboard">
-        <h1>DATACORP OS v8.0</h1>
+        <h1>DATACORP OS v8.5</h1>
         <div class="status-box">
             <div class="dash-header-row">
                 <div class="data-title">Banco de Dados</div>
@@ -145,58 +144,63 @@
     </div>
 
     <script>
-        // --- 0. ÁUDIO (Mantido da versão anterior, com som para a câmera) ---
+        // --- 0. ÁUDIO ---
         let audioCtx = null;
         function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
         document.body.addEventListener('pointerdown', initAudio, { once: true });
         document.body.addEventListener('keydown', initAudio, { once: true });
 
-        function playSwitchSound() {
+        function playSound(type) {
             if (!audioCtx) return;
             const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-            osc.type = 'square'; osc.frequency.setValueAtTime(200, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.1);
-            gain.gain.setValueAtTime(0.05, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
-            osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            
+            if (type === 'switch') {
+                osc.type = 'square'; osc.frequency.setValueAtTime(200, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.05, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+            } else if (type === 'zoom') {
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(80, audioCtx.currentTime); osc.frequency.linearRampToValueAtTime(120, audioCtx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.015, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+            } else if (type === 'collect') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(800, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+            } else if (type === 'nudge') {
+                osc.type = 'triangle'; osc.frequency.setValueAtTime(150, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.2);
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+                
+                setTimeout(() => {
+                    const osc2 = audioCtx.createOscillator(); const gain2 = audioCtx.createGain();
+                    osc2.type = 'sine'; osc2.frequency.setValueAtTime(1200, audioCtx.currentTime);
+                    gain2.gain.setValueAtTime(0.1, audioCtx.currentTime); gain2.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+                    osc2.connect(gain2); gain2.connect(audioCtx.destination); osc2.start(); osc2.stop(audioCtx.currentTime + 0.5);
+                }, 100);
+            }
         }
 
-        function playZoomSound() {
-            if (!audioCtx) return;
-            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-            osc.type = 'sawtooth'; osc.frequency.setValueAtTime(80, audioCtx.currentTime); osc.frequency.linearRampToValueAtTime(120, audioCtx.currentTime + 0.1);
-            gain.gain.setValueAtTime(0.015, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
-            osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.1);
-        }
-
-        function playCollectSound() {
-            if (!audioCtx) return;
-            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-            osc.type = 'sine'; osc.frequency.setValueAtTime(800, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.1);
-            gain.gain.setValueAtTime(0.1, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
-            osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.3);
-        }
-
-        function playNudgeSound() {
-            if (!audioCtx) return;
-            const osc1 = audioCtx.createOscillator(); const gain1 = audioCtx.createGain();
-            osc1.type = 'triangle'; osc1.frequency.setValueAtTime(150, audioCtx.currentTime); osc1.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.2);
-            gain1.gain.setValueAtTime(0.3, audioCtx.currentTime); gain1.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
-            osc1.connect(gain1); gain1.connect(audioCtx.destination); osc1.start(); osc1.stop(audioCtx.currentTime + 0.2);
-
-            const osc2 = audioCtx.createOscillator(); const gain2 = audioCtx.createGain();
-            osc2.type = 'sine'; osc2.frequency.setValueAtTime(1200, audioCtx.currentTime + 0.1);
-            gain2.gain.setValueAtTime(0, audioCtx.currentTime); gain2.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + 0.15); gain2.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);
-            osc2.connect(gain2); gain2.connect(audioCtx.destination); osc2.start(audioCtx.currentTime + 0.1); osc2.stop(audioCtx.currentTime + 0.6);
-        }
-
-        // --- 1. DADOS E FLUXO ---
+        // --- 1. DADOS DE JOGO ---
         setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString(); }, 1000);
-        const profissoes = ['Estudante', 'Professor', 'Contabilista', 'Programador', 'Desempregado', 'Motorista', 'Enfermeiro'];
-        const segredos = ['Tem dívidas ocultas', 'Pesquisou sobre insónias hoje', 'Ansiedade severa', 'Procura empréstimo bancário', 'Medo de demissão'];
+        
+        // Arquétipos para atribuir o Emoji Correto
+        const arquetipos = [
+            { tipo: '👩‍💼', profissoes: ['Executiva', 'Gestora', 'Contabilista'], min: 25, max: 55 },
+            { tipo: '👵', profissoes: ['Aposentada', 'Pensionista'], min: 65, max: 90 },
+            { tipo: '👩‍🎓', profissoes: ['Estudante Secundário', 'Universitária'], min: 16, max: 25 },
+            { tipo: '👨‍💻', profissoes: ['Analista de Redes', 'Programador'], min: 20, max: 50 },
+            { tipo: '👨‍🎓', profissoes: ['Estudante Técnico', 'Universitário'], min: 16, max: 25 },
+            { tipo: '🚶‍♂️', profissoes: ['Comerciante', 'Vendedor', 'Desempregado'], min: 20, max: 60 },
+            { tipo: '👩‍⚕️', profissoes: ['Enfermeira', 'Médica'], min: 25, max: 60 }
+        ];
+        const segredos = ['Tem dívidas ocultas', 'Pesquisou sobre insónias hoje', 'Ansiedade severa', 'Procura empréstimo bancário', 'Medo de demissão', 'Pesquisou dietas restritivas'];
 
         let faseAtual = 1; let scoreDados = 0; let lucro = 0; let nudgesConcluidos = 0;
         const META_FASE_1 = 150; const META_FASE_2 = 1500;
         let alvoAtual = null; let contratoAtivo = null; let isPaused = false; 
 
+        // TRÂNSITO (Semáforo)
         let isGreenX = true; 
         setInterval(() => {
             isGreenX = !isGreenX;
@@ -205,62 +209,61 @@
             else { tStatus.innerText = "TRÂNSITO: FLUXO EIXO Z"; tStatus.style.color = "#f59e0b"; }
         }, 8000);
 
-        // --- 2. CONFIGURAÇÃO THREE.JS ---
+        // --- 2. CONFIGURAÇÃO THREE.JS (OTIMIZADO) ---
         const gameArea = document.getElementById('game-area');
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x8892b0); 
-        scene.fog = new THREE.FogExp2(0x8892b0, 0.005); 
+        scene.fog = new THREE.FogExp2(0x8892b0, 0.006); 
 
         const camera = new THREE.PerspectiveCamera(45, gameArea.clientWidth / gameArea.clientHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        const renderer = new THREE.WebGLRenderer({ antialias: false }); // Antialias off melhora performance
         renderer.setSize(gameArea.clientWidth, gameArea.clientHeight);
         renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.shadowMap.type = THREE.BasicShadowMap; // Sombra mais leve
         gameArea.appendChild(renderer.domElement);
 
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); scene.add(ambientLight);
         const sunLight = new THREE.DirectionalLight(0xfff5e6, 0.8);
-        sunLight.position.set(50, 100, 30); sunLight.castShadow = true;
-        sunLight.shadow.mapSize.width = 2048; sunLight.shadow.mapSize.height = 2048;
+        sunLight.position.set(50, 100, 30); 
+        sunLight.castShadow = true;
+        sunLight.shadow.mapSize.width = 1024; // Otimizado
+        sunLight.shadow.mapSize.height = 1024;
         scene.add(sunLight);
 
-        // --- 3. AMBIENTE URBANO (Zebra Crossings) ---
-        const roadMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.9 });
+        // --- 3. AMBIENTE URBANO OTIMIZADO E ALARGADO ---
+        const roadMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 1.0 });
         const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), roadMat);
         ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
 
         const bMats = [
             new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.8 }),
-            new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.7 }),
-            new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.9 })
+            new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.9 })
         ];
 
         function buildComplexBlock(centerX, centerZ, w, d) {
-            const sidewalk = new THREE.Mesh(new THREE.BoxGeometry(w, 1, d), new THREE.MeshStandardMaterial({ color: 0x555555 }));
+            // Passeios mais largos (w + 12)
+            const sidewalk = new THREE.Mesh(new THREE.BoxGeometry(w + 12, 1, d + 12), new THREE.MeshStandardMaterial({ color: 0x555555 }));
             sidewalk.position.set(centerX, 0.5, centerZ); sidewalk.receiveShadow = true; scene.add(sidewalk);
-            const numBuildings = Math.floor(Math.random() * 3) + 2;
-            for(let i=0; i<numBuildings; i++) {
-                let bw = (w / 2) - 2; let bd = (d / 2) - 2;
-                let bh = Math.random() * 25 + 10;
-                let mat = bMats[Math.floor(Math.random() * bMats.length)];
-                let b = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), mat);
-                let ox = (Math.random() > 0.5 ? 1 : -1) * (bw/2 + 1); let oz = (Math.random() > 0.5 ? 1 : -1) * (bd/2 + 1);
+            
+            // Apenas 2 prédios para não esgotar recursos da placa gráfica
+            for(let i=0; i<2; i++) {
+                let bw = (w / 2) - 2; let bd = (d / 2) - 2; let bh = Math.random() * 20 + 15;
+                let b = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), bMats[i%2]);
+                let ox = (Math.random() > 0.5 ? 1 : -1) * (bw/2 + 2); let oz = (Math.random() > 0.5 ? 1 : -1) * (bd/2 + 2);
                 b.position.set(centerX + ox, bh/2 + 1, centerZ + oz); b.castShadow = true; b.receiveShadow = true; scene.add(b);
             }
         }
-        buildComplexBlock(-45, -45, 60, 60); buildComplexBlock(45, -45, 60, 60);  
-        buildComplexBlock(-45, 45, 60, 60);  buildComplexBlock(45, 45, 60, 60);   
+        
+        // Quarteirões mais afastados do centro para aumentar o cruzamento
+        buildComplexBlock(-50, -50, 50, 50); buildComplexBlock(50, -50, 50, 50);  
+        buildComplexBlock(-50, 50, 50, 50);  buildComplexBlock(50, 50, 50, 50);   
 
-        // NOVA FUNÇÃO: Faixa de Pedestres estilo Zebra
+        // Passadeiras reais reposicionadas para o novo asfalto
         function addZebraCrosswalk(cx, cz, rot) {
             const group = new THREE.Group();
-            const numStripes = 8;
-            const stripeWidth = 1.0;
-            const stripeLength = 12;
-            const spacing = 1.0;
+            const numStripes = 8; const stripeWidth = 1.0; const stripeLength = 12; const spacing = 1.2;
             const totalWidth = (numStripes * stripeWidth) + ((numStripes - 1) * spacing);
             const startX = -totalWidth / 2 + stripeWidth / 2;
-
             const mat = new THREE.MeshBasicMaterial({ color: 0xdddddd });
             const geo = new THREE.PlaneGeometry(stripeWidth, stripeLength);
 
@@ -269,24 +272,33 @@
                 stripe.position.set(startX + i * (stripeWidth + spacing), 0, 0);
                 group.add(stripe);
             }
+            group.rotation.x = -Math.PI / 2; group.rotation.z = rot;
+            group.position.set(cx, 0.15, cz); scene.add(group);
+        }
+        addZebraCrosswalk(0, -21, Math.PI/2); addZebraCrosswalk(0, 21, Math.PI/2);
+        addZebraCrosswalk(-21, 0, 0); addZebraCrosswalk(21, 0, 0);
 
-            group.rotation.x = -Math.PI / 2;
-            group.rotation.z = rot;
-            // Posiciona ligeiramente acima do chão para não haver Z-fighting
-            group.position.set(cx, 0.15, cz);
-            scene.add(group);
+        // --- 4. GERAÇÃO DE TEXTURAS DE EMOJIS (CACHE) ---
+        const emojiCache = {};
+        function getEmojiSprite(emoji) {
+            if(!emojiCache[emoji]) {
+                const canvas = document.createElement('canvas');
+                canvas.width = 128; canvas.height = 128;
+                const ctx = canvas.getContext('2d');
+                ctx.font = '90px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                // Adiciona um leve brilho
+                ctx.shadowColor = "rgba(56, 189, 248, 0.5)"; ctx.shadowBlur = 10;
+                ctx.fillText(emoji, 64, 70); 
+                const tex = new THREE.CanvasTexture(canvas);
+                emojiCache[emoji] = new THREE.SpriteMaterial({ map: tex, transparent: true });
+            }
+            return new THREE.Sprite(emojiCache[emoji]);
         }
 
-        // Adicionar as passadeiras raiadas em cada via de cruzamento
-        addZebraCrosswalk(0, -17, Math.PI/2);
-        addZebraCrosswalk(0, 17, Math.PI/2);
-        addZebraCrosswalk(-17, 0, 0);
-        addZebraCrosswalk(17, 0, 0);
-
-        // --- 4. SISTEMA DE CARROS ---
+        // --- 5. SISTEMA DE CARROS OTIMIZADO ---
         const cars = [];
         const carGeo = new THREE.BoxGeometry(3, 2, 6);
-        const carMats = [new THREE.MeshStandardMaterial({color: 0xef4444}), new THREE.MeshStandardMaterial({color: 0x3b82f6}), new THREE.MeshStandardMaterial({color: 0xffffff}), new THREE.MeshStandardMaterial({color: 0x10b981})];
+        const carMats = [new THREE.MeshStandardMaterial({color: 0xef4444}), new THREE.MeshStandardMaterial({color: 0x3b82f6}), new THREE.MeshStandardMaterial({color: 0xffffff})];
 
         function spawnCar() {
             let car = new THREE.Mesh(carGeo, carMats[Math.floor(Math.random()*carMats.length)]); car.castShadow = true;
@@ -301,55 +313,33 @@
             else if(lane === 3) { car.position.set(6, 1, 100); car.userData = { axis: 'Z', dir: -1, baseSpeed: 0.6 }; car.rotation.y = Math.PI; }
             car.userData.speed = car.userData.baseSpeed; scene.add(car); cars.push(car);
         }
-        setInterval(() => { if(cars.length < 12 && !isPaused) spawnCar(); }, 3000);
+        setInterval(() => { if(cars.length < 8 && !isPaused) spawnCar(); }, 3500);
 
-        // --- 5. REDE DE CÂMERAS PTZ ---
-        // Posições baseadas nos quatro cantos do cruzamento a espiar o centro
+        // --- 6. REDE DE CÂMERAS PTZ ---
         const cameraNetwork = [
-            { name: "REDE DATACORP - CÂMARA 01 (SUL)", pos: {x: 0, y: 15, z: 60}, basePan: 0, baseTilt: -0.15 },
-            { name: "REDE DATACORP - CÂMARA 02 (OESTE)", pos: {x: -60, y: 15, z: 0}, basePan: -Math.PI/2, baseTilt: -0.15 },
-            { name: "REDE DATACORP - CÂMARA 03 (LESTE)", pos: {x: 60, y: 15, z: 0}, basePan: Math.PI/2, baseTilt: -0.15 },
-            { name: "REDE DATACORP - CÂMARA 04 (NORTE)", pos: {x: 0, y: 15, z: -60}, basePan: Math.PI, baseTilt: -0.15 }
+            { name: "REDE DATACORP - CÂMARA 01 (SUL)", pos: {x: 0, y: 15, z: 65}, basePan: 0, baseTilt: -0.15 },
+            { name: "REDE DATACORP - CÂMARA 02 (OESTE)", pos: {x: -65, y: 15, z: 0}, basePan: -Math.PI/2, baseTilt: -0.15 },
+            { name: "REDE DATACORP - CÂMARA 03 (LESTE)", pos: {x: 65, y: 15, z: 0}, basePan: Math.PI/2, baseTilt: -0.15 },
+            { name: "REDE DATACORP - CÂMARA 04 (NORTE)", pos: {x: 0, y: 15, z: -65}, basePan: Math.PI, baseTilt: -0.15 }
         ];
         
         let currentCamIndex = 0;
-        let basePan = cameraNetwork[0].basePan;
-        let baseTilt = cameraNetwork[0].baseTilt;
-        let panAngle = basePan; 
-        let tiltAngle = baseTilt; 
-        let targetPan = basePan; 
-        let targetTilt = baseTilt;
-        let mouseX = 0; 
-        let mouseY = 0;
+        let basePan = cameraNetwork[0].basePan; let baseTilt = cameraNetwork[0].baseTilt;
+        let panAngle = basePan; let tiltAngle = baseTilt; 
+        let targetPan = basePan; let targetTilt = baseTilt;
+        let mouseX = 0; let mouseY = 0;
 
-        // Inicializar câmera 1
         camera.position.set(cameraNetwork[0].pos.x, cameraNetwork[0].pos.y, cameraNetwork[0].pos.z);
 
         window.switchCam = function(index) {
-            initAudio(); playSwitchSound();
-            currentCamIndex = index;
-            let cam = cameraNetwork[index];
-            
-            // Move a câmera física
+            initAudio(); playSound('switch');
+            currentCamIndex = index; let cam = cameraNetwork[index];
             camera.position.set(cam.pos.x, cam.pos.y, cam.pos.z);
-            
-            // Redefine as direções base
-            basePan = cam.basePan;
-            baseTilt = cam.baseTilt;
-            
-            // Atualiza os painéis UI
+            basePan = cam.basePan; baseTilt = cam.baseTilt;
             document.getElementById('cam-name').innerText = cam.name;
-            
-            document.querySelectorAll('.cam-btn').forEach((btn, i) => {
-                if(i === index) btn.classList.add('active');
-                else btn.classList.remove('active');
-            });
-            
-            // Recalcula o target imediatamente para não varrer a rua sem querer
-            targetPan = basePan + mouseX * (Math.PI / 2.5);
-            targetTilt = baseTilt - (mouseY * 0.25);
-            panAngle = targetPan;
-            tiltAngle = targetTilt;
+            document.querySelectorAll('.cam-btn').forEach((btn, i) => { if(i === index) btn.classList.add('active'); else btn.classList.remove('active'); });
+            targetPan = basePan + mouseX * (Math.PI / 2.5); targetTilt = baseTilt - (mouseY * 0.25);
+            panAngle = targetPan; tiltAngle = targetTilt;
         };
 
         function updatePTZCamera() {
@@ -364,21 +354,17 @@
 
         gameArea.addEventListener('pointermove', (e) => {
             const rect = renderer.domElement.getBoundingClientRect();
-            // Guarda as proporções puras do mouse
             mouseX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
             mouseY = ((e.clientY - rect.top) / rect.height) * 2 - 1;
-            
-            // O alvo de rotação é a Rotação Base da Câmera Atual + O offset do rato
             targetPan = basePan + mouseX * (Math.PI / 2.5); 
             targetTilt = baseTilt - (mouseY * 0.25); 
-            
             mouseVector.x = mouseX; mouseVector.y = -mouseY;
             handleRaycastHover();
         });
 
         gameArea.addEventListener('wheel', (e) => {
             camera.fov += e.deltaY * 0.05; camera.fov = Math.max(15, Math.min(65, camera.fov)); camera.updateProjectionMatrix();
-            let now = Date.now(); if (now - window.zoomThrottle > 50) { playZoomSound(); window.zoomThrottle = now; }
+            let now = Date.now(); if (now - window.zoomThrottle > 50) { playSound('zoom'); window.zoomThrottle = now; }
         });
 
         gameArea.addEventListener('pointerdown', (e) => {
@@ -389,39 +375,45 @@
 
         window.addEventListener('keydown', (e) => {
             initAudio();
-            // Atalhos 1 a 4 para trocar câmeras rapidamente
-            if(e.key === '1') switchCam(0);
-            if(e.key === '2') switchCam(1);
-            if(e.key === '3') switchCam(2);
-            if(e.key === '4') switchCam(3);
-
-            if (e.code === 'Space' || e.key === 'e' || e.key === 'E') {
-                e.preventDefault(); if (!btnAcao.disabled) btnAcao.click();
-            }
+            if(e.key === '1') switchCam(0); if(e.key === '2') switchCam(1); if(e.key === '3') switchCam(2); if(e.key === '4') switchCam(3);
+            if (e.code === 'Space' || e.key === 'e' || e.key === 'E') { e.preventDefault(); if (!btnAcao.disabled) btnAcao.click(); }
         });
 
-        // --- 6. SISTEMA DE NPCs ---
+        // --- 7. SISTEMA DE NPCs OTIMIZADO ---
         const npcs = []; 
-        const npcBodyMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.6 });
+        const sharedBodyGeo = new THREE.CylinderGeometry(0.7, 0.9, 3.2, 8); // Polígonos reduzidos
+        const sharedHeadGeo = new THREE.SphereGeometry(0.6, 12, 12);
+        
+        // Rotas das calçadas alargadas
         const pRoutes = [
-            { sx: -14, sz: 80, ex: -14, ez: -80 }, { sx: 14, sz: -80, ex: 14, ez: 80 },   
-            { sx: -80, sz: -14, ex: 80, ez: -14 }, { sx: 80, sz: 14, ex: -80, ez: 14 }    
+            { sx: -19, sz: 80, ex: -19, ez: -80 }, { sx: 19, sz: -80, ex: 19, ez: 80 },   
+            { sx: -80, sz: -19, ex: 80, ez: -19 }, { sx: 80, sz: 19, ex: -80, ez: 19 }    
         ];
 
         function createNPC() {
             const group = new THREE.Group();
-            const body = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.9, 3.2, 12), npcBodyMat.clone());
-            body.position.y = 1.6 + 1; body.castShadow = true;
-            const head = new THREE.Mesh(new THREE.SphereGeometry(0.6, 16, 16), body.material);
-            head.position.y = 3.8 + 1; head.castShadow = true;
-            group.add(body); group.add(head);
+            const arq = arquetipos[Math.floor(Math.random() * arquetipos.length)];
+            
+            // Cada NPC precisa do seu material para o efeito hover/vermelho
+            const mat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.8 });
+            
+            const body = new THREE.Mesh(sharedBodyGeo, mat); body.position.y = 1.6 + 1;
+            const head = new THREE.Mesh(sharedHeadGeo, mat); head.position.y = 3.8 + 1;
+            
+            // O Holograma Emoji
+            const emojiSprite = getEmojiSprite(arq.tipo);
+            emojiSprite.position.y = 5.2 + 1;
+            emojiSprite.scale.set(3, 3, 1);
+
+            group.add(body); group.add(head); group.add(emojiSprite);
             
             group.userData = {
                 id: "ID #" + Math.floor(Math.random()*90000 + 10000),
-                profissao: profissoes[Math.floor(Math.random()*profissoes.length)],
+                profissao: arq.profissoes[Math.floor(Math.random()*arq.profissoes.length)],
                 excedente: segredos[Math.floor(Math.random()*segredos.length)],
                 extraido: false, isZumbi: false, isNudging: false, nudgePath: [],
-                speed: Math.random() * 0.04 + 0.02 
+                speed: Math.random() * 0.04 + 0.02,
+                baseMaterial: mat // Guarda referência para limpar depois
             };
 
             const route = pRoutes[Math.floor(Math.random() * pRoutes.length)];
@@ -429,22 +421,31 @@
             group.userData.dirX = Math.sign(route.ex - route.sx); group.userData.dirZ = Math.sign(route.ez - route.sz);
 
             if(contratoAtivo && Math.random() > 0.4) {
-                if(contratoAtivo.cliente === "Rede Fast Food") group.userData.excedente = 'Ar do ambiente (está de dieta)';
+                if(contratoAtivo.cliente === "Rede Fast Food") group.userData.excedente = 'Pesquisou dietas restritivas';
                 if(contratoAtivo.cliente === "AgiotaBank") group.userData.excedente = 'Procura empréstimo bancário';
             }
             scene.add(group); npcs.push(group);
         }
-        for(let i=0; i<12; i++) setTimeout(createNPC, i*800);
-        setInterval(() => { if(npcs.length < 20) createNPC(); }, 2000);
+        for(let i=0; i<10; i++) setTimeout(createNPC, i*800);
+        setInterval(() => { if(npcs.length < 15) createNPC(); }, 2000); // Limite reduzido para 15 NPCs para garantir FPS
 
-        // --- 7. LÓGICA DE JOGO ---
+        // Função de Limpeza de Memória (Evita travamentos)
+        function disposeNPC(npcGroup) {
+            scene.remove(npcGroup);
+            if(npcGroup.userData.baseMaterial) npcGroup.userData.baseMaterial.dispose();
+            // Não removemos as geometrias porque são partilhadas!
+        }
+
+        // --- 8. LÓGICA DE JOGO ---
         function handleRaycastHover() {
             raycaster.setFromCamera(mouseVector, camera);
             const intersects = raycaster.intersectObjects(npcs, true);
-            npcs.forEach(g => { if(g !== alvoAtual && !g.userData.isZumbi) g.children.forEach(m => m.material.emissive.setHex(0x000000)); });
+            npcs.forEach(g => { 
+                if(g !== alvoAtual && !g.userData.isZumbi) g.children.forEach(m => { if(m.isMesh) m.material.emissive.setHex(0x000000); }); 
+            });
             if(intersects.length > 0) {
                 let g = intersects[0].object.parent;
-                if(g !== alvoAtual && !g.userData.isZumbi) g.children.forEach(m => m.material.emissive.setHex(0x333333));
+                if(g !== alvoAtual && !g.userData.isZumbi) g.children.forEach(m => { if(m.isMesh) m.material.emissive.setHex(0x333333); });
             }
         }
 
@@ -452,9 +453,9 @@
         
         function focarAlvo(group) {
             if(group.userData.isZumbi || group.userData.isNudging) return;
-            if(alvoAtual && alvoAtual !== group) alvoAtual.children.forEach(m => m.material.emissive.setHex(0x000000));
+            if(alvoAtual && alvoAtual !== group) alvoAtual.children.forEach(m => { if(m.isMesh) m.material.emissive.setHex(0x000000); });
             
-            alvoAtual = group; alvoAtual.children.forEach(m => m.material.emissive.setHex(0xf43f5e)); 
+            alvoAtual = group; alvoAtual.children.forEach(m => { if(m.isMesh) m.material.emissive.setHex(0xf43f5e); }); 
             isPaused = true; 
 
             document.getElementById('dados-conscientes').innerHTML = `<div class="log-entry"><span class="key">ID:</span> <span class="val">${group.userData.id}</span></div><div class="log-entry"><span class="key">Perfil:</span> <span class="val">${group.userData.profissao}</span></div>`;
@@ -470,7 +471,7 @@
         }
 
         function desativarAlvo() {
-            if (alvoAtual && !alvoAtual.userData.isZumbi) alvoAtual.children.forEach(m => m.material.emissive.setHex(0x000000));
+            if (alvoAtual && !alvoAtual.userData.isZumbi) alvoAtual.children.forEach(m => { if(m.isMesh) m.material.emissive.setHex(0x000000); });
             alvoAtual = null; isPaused = false; 
             document.getElementById('dados-conscientes').innerHTML = 'Aguardando seleção...';
             document.getElementById('dados-excedentes').innerHTML = 'Nenhum alvo selecionado.'; document.getElementById('dados-excedentes').className = 'hidden-data';
@@ -479,8 +480,8 @@
 
         const contratosFase2 = [{ cliente: "Seguradora", desc: "Ache perfis de risco (Ansiedade/Medo).", validador: (n) => n.userData.excedente.includes('Ansiedade') || n.userData.excedente.includes('Medo'), valor: 800 }];
         const contratosFase3 = [
-            { cliente: "Rede Fast Food", desc: "Ache vulnerável fazendo dieta.", validador: (n) => n.userData.excedente.includes('dieta'), nudgeMsg: "DISPARAR CUPOM RELÂMPAGO", dest: {x: -25, z: -25}, corner: {x: -14, z: -14}, valor: 3000 },
-            { cliente: "AgiotaBank", desc: "Ache quem busca empréstimo.", validador: (n) => n.userData.excedente.includes('empréstimo'), nudgeMsg: "ENVIAR ALERTA DE CRÉDITO", dest: {x: 25, z: 25}, corner: {x: 14, z: 14}, valor: 5000 }
+            { cliente: "Rede Fast Food", desc: "Ache vulnerável fazendo dieta.", validador: (n) => n.userData.excedente.includes('dieta'), nudgeMsg: "DISPARAR CUPOM RELÂMPAGO", dest: {x: -25, z: -25}, corner: {x: -19, z: -19}, valor: 3000 },
+            { cliente: "AgiotaBank", desc: "Ache quem busca empréstimo.", validador: (n) => n.userData.excedente.includes('empréstimo'), nudgeMsg: "ENVIAR ALERTA DE CRÉDITO", dest: {x: 25, z: 25}, corner: {x: 19, z: 19}, valor: 5000 }
         ];
 
         function gerarNovoContrato() {
@@ -497,7 +498,7 @@
         btnAcao.addEventListener('click', () => {
             if(!alvoAtual) return; let alvo = alvoAtual; 
             if(faseAtual === 1) {
-                playCollectSound(); document.getElementById('dados-excedentes').classList.replace('hidden-data', 'revealed-data');
+                playSound('collect'); document.getElementById('dados-excedentes').classList.replace('hidden-data', 'revealed-data');
                 let extraido = Math.floor(Math.random()*40)+10; scoreDados += extraido;
                 document.getElementById('score-display').innerText = `${scoreDados} GB`;
                 btnAcao.innerText = "COLETADO"; btnAcao.disabled = true; alvo.userData.extraido = true;
@@ -506,24 +507,25 @@
             }
             else if(faseAtual === 2) {
                 if(contratoAtivo.validador(alvo)) {
-                    playCollectSound(); notificarLucro(contratoAtivo.valor);
+                    playSound('collect'); notificarLucro(contratoAtivo.valor);
                     btnAcao.innerText = "VENDIDO!"; btnAcao.disabled = true; alvo.userData.isZumbi = true;
-                    alvo.children.forEach(m => { m.material.color.setHex(0x475569); m.material.emissive.setHex(0x000000); });
+                    alvo.children.forEach(m => { if(m.isMesh) { m.material.color.setHex(0x475569); m.material.emissive.setHex(0x000000); }});
+                    alvo.children[2].material.opacity = 0.3; // Apaga o emoji
                     alvo.userData.speed *= 0.3; setTimeout(() => { desativarAlvo(); gerarNovoContrato(); }, 600);
                     if(lucro >= META_FASE_2) setTimeout(() => { document.getElementById('modal-overlay').style.display='flex'; document.getElementById('modal-fase3').style.display='block'; isPaused=true; }, 1200);
                 } else { btnAcao.innerText = "ALVO INCORRETO"; btnAcao.disabled = true; setTimeout(() => { desativarAlvo(); }, 600); }
             }
             else if(faseAtual === 3) {
                 if(contratoAtivo.validador(alvo)) {
-                    playNudgeSound(); btnAcao.innerText = "MANIPULAÇÃO ATIVA!"; btnAcao.disabled = true;
-                    alvo.userData.isNudging = true; alvo.children.forEach(m => m.material.emissive.setHex(0xa855f7)); 
+                    playSound('nudge'); btnAcao.innerText = "MANIPULAÇÃO ATIVA!"; btnAcao.disabled = true;
+                    alvo.userData.isNudging = true; alvo.children.forEach(m => { if(m.isMesh) m.material.emissive.setHex(0xa855f7); }); 
                     alvo.userData.nudgePath = [{ x: contratoAtivo.corner.x, z: contratoAtivo.corner.z }, { x: contratoAtivo.dest.x, z: contratoAtivo.dest.z }];
                     setTimeout(() => { desativarAlvo(); }, 600);
                 } else { btnAcao.innerText = "GATILHO INÚTIL"; btnAcao.disabled = true; setTimeout(() => { desativarAlvo(); }, 600); }
             }
         });
 
-        // --- 8. LOOP DE ANIMAÇÃO ---
+        // --- 9. LOOP DE ANIMAÇÃO ---
         window.zoomThrottle = 0;
         function animate() {
             requestAnimationFrame(animate);
@@ -535,7 +537,7 @@
                 if(!isPaused) {
                     let isMyLightGreen = (c.userData.axis === 'X') ? isGreenX : !isGreenX;
                     let pos = c.userData.axis === 'X' ? c.position.x : c.position.z;
-                    let distToIntersection = c.userData.dir > 0 ? (-17 - pos) : (pos - 17);
+                    let distToIntersection = c.userData.dir > 0 ? (-23 - pos) : (pos - 23);
                     
                     if (!isMyLightGreen && distToIntersection > 0 && distToIntersection < 35) {
                         c.userData.speed *= 0.85; c.userData.brakeLights.color.setHex(0xff0000); 
@@ -551,12 +553,16 @@
 
             for (let i = npcs.length - 1; i >= 0; i--) {
                 let npc = npcs[i];
+                
+                // Faz o Emoji olhar sempre para a câmera (Billboard effect)
+                if(npc.children[2]) npc.children[2].lookAt(camera.position);
+
                 if (npc.userData.isNudging && npc.userData.nudgePath.length > 0) {
                     let target = npc.userData.nudgePath[0]; let dx = target.x - npc.position.x; let dz = target.z - npc.position.z; let dist = Math.hypot(dx, dz);
                     if (dist < 1.0) {
                         npc.userData.nudgePath.shift(); 
                         if(npc.userData.nudgePath.length === 0) {
-                            scene.remove(npc); npcs.splice(i, 1);
+                            disposeNPC(npc); npcs.splice(i, 1);
                             notificarLucro(contratoAtivo.valor); nudgesConcluidos++;
                             if(nudgesConcluidos >= 2) { setTimeout(() => { document.getElementById('modal-overlay').style.display='flex'; document.getElementById('final-screen').style.display='block'; isPaused=true;}, 1000); }
                             else { gerarNovoContrato(); } continue;
@@ -566,7 +572,7 @@
                 else if (!isPaused) {
                     npc.position.x += npc.userData.dirX * npc.userData.speed; npc.position.z += npc.userData.dirZ * npc.userData.speed;
                 }
-                if (Math.abs(npc.position.x) > 100 || Math.abs(npc.position.z) > 100) { scene.remove(npc); npcs.splice(i, 1); }
+                if (Math.abs(npc.position.x) > 100 || Math.abs(npc.position.z) > 100) { disposeNPC(npc); npcs.splice(i, 1); }
             }
             renderer.render(scene, camera);
         }
