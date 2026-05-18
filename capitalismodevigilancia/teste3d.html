@@ -14,11 +14,12 @@
 
         #game-area { flex: 1; position: relative; border-right: 2px solid var(--border-color); overflow: hidden; }
 
-        /* Filtro de Câmera PTZ aprimorado */
-        .scanline { position: absolute; width: 100%; height: 100%; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.35) 50%); background-size: 100% 4px; pointer-events: none; z-index: 50; }
-        .vignette { position: absolute; width: 100%; height: 100%; box-shadow: 0 0 150px rgba(0,0,0,0.9) inset; pointer-events: none; z-index: 49; }
-        .camera-ui { position: absolute; top: 20px; left: 20px; z-index: 51; font-size: 14px; color: rgba(56, 189, 248, 0.9); text-shadow: 0 0 5px var(--text-main); pointer-events: none; }
-        .controls-hint { position: absolute; bottom: 20px; left: 20px; z-index: 51; font-size: 12px; color: #94a3b8; pointer-events: none; }
+        /* Interface da Lente PTZ Realista */
+        .scanline { position: absolute; width: 100%; height: 100%; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.2) 50%); background-size: 100% 4px; pointer-events: none; z-index: 50; }
+        .vignette { position: absolute; width: 100%; height: 100%; box-shadow: 0 0 200px rgba(0,0,0,0.8) inset; pointer-events: none; z-index: 49; }
+        .camera-ui { position: absolute; top: 20px; left: 20px; z-index: 51; font-size: 14px; color: rgba(255, 255, 255, 0.8); text-shadow: 0 0 2px #000; pointer-events: none; }
+        .controls-hint { position: absolute; bottom: 20px; left: 20px; z-index: 51; font-size: 12px; color: rgba(255, 255, 255, 0.6); pointer-events: none; }
+        .crosshair { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 40px; height: 40px; border: 1px solid rgba(255,255,255,0.3); border-radius: 50%; pointer-events: none; z-index: 51;}
         .rec-dot { display: inline-block; width: 10px; height: 10px; background-color: #f43f5e; border-radius: 50%; margin-right: 5px; animation: blink 1s infinite; }
         @keyframes blink { 0% {opacity: 1;} 50% {opacity: 0;} 100% {opacity: 1;} }
 
@@ -30,8 +31,11 @@
         .dash-header-row .data-title { margin-bottom: 0; }
         #fase-display { font-weight: bold; color: var(--text-main); font-size: 0.85rem; text-align: right; }
         .data-title { font-size: 0.9rem; color: #94a3b8; margin-bottom: 5px; text-transform: uppercase; }
+        #contrato-box { display: none; border-color: var(--text-warning); background-color: rgba(245, 158, 11, 0.1); }
+        .contrato-cliente { font-weight: bold; color: var(--text-warning); margin-bottom: 5px; }
+        .contrato-desc { font-size: 0.85rem; color: #cbd5e1; }
         #score-display { font-size: 1.4rem; color: var(--text-success); font-weight: bold; text-align: center; margin: 5px 0; }
-        
+        #lucro-display { display: none; font-size: 1.4rem; color: var(--text-warning); font-weight: bold; text-align: center; margin: 5px 0; transition: color 0.3s; }
         #dados-conscientes, #dados-excedentes { min-height: 80px; font-size: 0.9rem; }
         .hidden-data { color: var(--text-alert); filter: blur(4px); transition: filter 0.5s ease; }
         .revealed-data { filter: blur(0); color: var(--text-success); }
@@ -41,34 +45,76 @@
         #btn-acao:disabled { background-color: #475569; cursor: not-allowed; color: #94a3b8; }
         
         .log-entry { margin-bottom: 8px; } .key { color: #cbd5e1; } .val { color: #fcd34d; }
+
+        /* Modais */
+        #modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 100; justify-content: center; align-items: center; }
+        .modal-content { background: var(--panel-bg); border: 2px solid var(--text-main); padding: 40px; max-width: 600px; text-align: center; border-radius: 8px; }
+        .modal-title { color: var(--text-warning); font-size: 1.8rem; margin-bottom: 15px; }
+        .modal-btn { background: var(--text-main); color: #000; border: none; padding: 12px 25px; font-size: 1.1rem; font-family: inherit; font-weight: bold; margin-top: 25px; cursor: pointer; border-radius: 4px; }
+        .modal-btn:hover { background: #fff; }
+        #final-screen { display: none; text-align: left; }
+        .final-q { font-size: 1.5rem; color: var(--text-alert); margin: 20px 0; font-weight: bold; opacity: 0; transform: translateY(20px); animation: fadeUp 1s forwards; }
+        @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
     </style>
-    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 </head>
 <body>
+
+    <div id="modal-overlay">
+        <div class="modal-content" id="modal-fase2" style="display: none;">
+            <div class="modal-title">ATUALIZAÇÃO: FASE 2</div>
+            <p>Os servidores estão cheios de dados e a vigilância passiva tem custos. Está na hora de gerar lucros.</p>
+            <p style="color: var(--text-alert);"><strong>Novo Objetivo: Mercado de Futuros.</strong></p>
+            <p>Venda a certeza do que as pessoas farão. Identifique na multidão os alvos exatos pedidos pelos nossos clientes corporativos.</p>
+            <button class="modal-btn" onclick="iniciarFase2()">ATIVAR PREVISÃO</button>
+        </div>
+        <div class="modal-content" id="modal-fase3" style="display: none;">
+            <div class="modal-title" style="color: var(--text-nudge);">ATUALIZAÇÃO: FASE 3</div>
+            <p>Prever é bom, mas <strong>Garantir o resultado</strong> vale muito mais.</p>
+            <p style="color: var(--text-nudge);"><strong>Novo Objetivo: Poder Instrumentário (O Nudge).</strong></p>
+            <p>Use os dados para manipular a realidade. Dispare notificações e alertas falsos nos celulares dos pedestres para alterar à força a rota física deles até às nossas lojas.</p>
+            <button class="modal-btn" onclick="iniciarFase3()" style="background: var(--text-nudge); color: white;">ATIVAR MANIPULAÇÃO</button>
+        </div>
+        <div class="modal-content" id="final-screen">
+            <h2 style="color: #fff; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">FIM DA SIMULAÇÃO</h2>
+            <p style="color: #cbd5e1; font-size: 1.2rem; margin-bottom: 30px;">O sistema cumpriu o seu objetivo. O livre-arbítrio foi automatizado com sucesso.</p>
+            <div class="final-q" style="animation-delay: 1s;">1. Quem sabe?</div>
+            <p style="color: #94a3b8; animation: fadeUp 1s forwards; animation-delay: 1.5s; opacity: 0; margin-top: -10px; margin-bottom: 30px;">(Você sabia as dívidas e medos deles. Eles não sabiam que você os via).</p>
+            <div class="final-q" style="animation-delay: 3s;">2. Quem decide?</div>
+            <p style="color: #94a3b8; animation: fadeUp 1s forwards; animation-delay: 3.5s; opacity: 0; margin-top: -10px; margin-bottom: 30px;">(Você decidiu para que loja eles iam, mascarando a manipulação como uma escolha deles).</p>
+            <div class="final-q" style="animation-delay: 5s;">3. Quem decide quem decide?</div>
+            <p style="color: #94a3b8; animation: fadeUp 1s forwards; animation-delay: 5.5s; opacity: 0; margin-top: -10px; margin-bottom: 30px;">(Apenas a Corporação. Não houve debate público).</p>
+        </div>
+    </div>
 
     <div id="game-area">
         <div class="vignette"></div>
         <div class="scanline"></div>
+        <div class="crosshair"></div>
         <div class="camera-ui">
-            SISTEMA DATACORP - CÂMARA PTZ 01<br>
-            LOCAL: ZONA COMERCIAL [DIGITAL TWIN]<br>
+            CÂMARA DE VIGILÂNCIA PTZ-04<br>
+            RUA PRINCIPAL<br>
             <span style="color: #f43f5e;"><span class="rec-dot"></span><span id="clock">00:00:00</span></span>
         </div>
         <div class="controls-hint">
-            [RATO ESQUERDO] Rotação PTZ | [SCROLL] Lente de Zoom | [CLIQUE NO ALVO] Extrair Dados
+            [CLIQUE E ARRASTE] Mover Câmera | [SCROLL] Zoom Óptico | [CLIQUE NO ALVO] Inspecionar
         </div>
     </div>
 
     <div id="dashboard">
-        <h1>DATACORP OS v4.1</h1>
+        <h1>DATACORP OS v5.0 (Real 3D)</h1>
         <div class="status-box">
             <div class="dash-header-row">
                 <div class="data-title">Banco de Dados</div>
                 <div id="fase-display">FASE 1: EXTRAÇÃO</div>
             </div>
             <div id="score-display">0 GB (Gigabytes)</div>
+            <div id="lucro-display">$ 0,00</div>
+        </div>
+        <div class="status-box" id="contrato-box">
+            <div class="data-title" id="titulo-contrato">Contrato Ativo</div>
+            <div class="contrato-cliente" id="c-cliente">Aguardando cliente...</div>
+            <div class="contrato-desc" id="c-desc">Analisando mercado...</div>
         </div>
         <div class="status-box">
             <div class="data-title">Dados Conscientes (Identidade)</div>
@@ -82,301 +128,380 @@
     </div>
 
     <script>
-        // --- CONFIGURAÇÃO DA UI ---
+        // --- 1. DADOS DE JOGO ---
         const clockEl = document.getElementById('clock');
         setInterval(() => { clockEl.innerText = new Date().toLocaleTimeString(); }, 1000);
 
-        let alvoAtual = null;
-        let scoreDados = 0;
-        
-        const divConscientes = document.getElementById('dados-conscientes');
-        const divExcedentes = document.getElementById('dados-excedentes');
-        const btnAcao = document.getElementById('btn-acao');
-        const scoreDisplay = document.getElementById('score-display');
-
-        const profissoes = ['Estudante', 'Professor', 'Contabilista', 'Programador', 'Desempregado', 'Enfermeiro'];
+        const profissoes = ['Estudante', 'Professor', 'Contabilista', 'Programador', 'Desempregado'];
         const segredos = ['Tem dívidas ocultas', 'Pesquisou sobre insónias hoje', 'Ansiedade severa', 'Procura empréstimo bancário', 'Medo de demissão'];
 
-        // --- 1. CONFIGURAÇÃO DO THREE.JS ---
+        let faseAtual = 1; let scoreDados = 0; let lucro = 0; let nudgesConcluidos = 0;
+        const META_FASE_1 = 150; const META_FASE_2 = 1500;
+        let alvoAtual = null; let contratoAtivo = null;
+
+        // --- 2. CONFIGURAÇÃO THREE.JS ---
         const gameArea = document.getElementById('game-area');
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x0f172a); // Fundo escuro cibernético
-        scene.fog = new THREE.Fog(0x0f172a, 30, 150); // Nevoeiro para profundidade
+        scene.background = new THREE.Color(0x8892b0); // Céu nublado/cinza
+        scene.fog = new THREE.FogExp2(0x8892b0, 0.005); // Nevoeiro realista
 
-        const camera = new THREE.PerspectiveCamera(50, gameArea.clientWidth / gameArea.clientHeight, 0.1, 1000);
-        camera.position.set(0, 35, 60); // Posição elevada da câmera
+        const camera = new THREE.PerspectiveCamera(45, gameArea.clientWidth / gameArea.clientHeight, 0.1, 1000);
+        // A CÂMARA FIXA NO POSTE
+        camera.position.set(0, 35, 70); 
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(gameArea.clientWidth, gameArea.clientHeight);
         renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         gameArea.appendChild(renderer.domElement);
 
-        // --- 2. CONTROLOS PTZ REALISTAS ---
-        const controls = new THREE.OrbitControls(camera, renderer.domElement);
-        
-        // Bloqueia o "arrastar" da câmera (a câmera PTZ está fixa num poste)
-        controls.enablePan = false; 
-        
-        // Reduz a velocidade para dar a sensação de peso dos motores da câmera
-        controls.rotateSpeed = 0.2; 
-        
-        // Restringe o zoom (Lente)
-        controls.minDistance = 15;
-        controls.maxDistance = 80;
-
-        // Restringe o ângulo Vertical (Tilt) - não deixa olhar para o céu nem enterrar no chão
-        controls.minPolarAngle = Math.PI / 4; // Máximo para cima
-        controls.maxPolarAngle = Math.PI / 2.2; // Máximo para baixo
-
-        // Restringe o ângulo Horizontal (Pan) a cerca de 160 graus na frente do poste
-        controls.minAzimuthAngle = -Math.PI / 2.2;
-        controls.maxAzimuthAngle = Math.PI / 2.2;
-
-        // --- 3. ILUMINAÇÃO ---
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+        // Iluminação Realista (Sol/Céu)
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
         scene.add(ambientLight);
         
-        const spotLight = new THREE.SpotLight(0x38bdf8, 1);
-        spotLight.position.set(0, 80, 20);
-        spotLight.angle = Math.PI / 4;
-        spotLight.penumbra = 0.5;
-        spotLight.castShadow = true;
-        scene.add(spotLight);
+        const sunLight = new THREE.DirectionalLight(0xfff5e6, 0.8);
+        sunLight.position.set(50, 100, 30);
+        sunLight.castShadow = true;
+        sunLight.shadow.mapSize.width = 2048;
+        sunLight.shadow.mapSize.height = 2048;
+        scene.add(sunLight);
 
-        // --- 4. CENÁRIO: THE DIGITAL TWIN ---
-        // Grelha Holográfica do chão
-        const gridHelper = new THREE.GridHelper(200, 50, 0x38bdf8, 0x1e293b);
-        gridHelper.position.y = 0.1;
-        scene.add(gridHelper);
-
-        const groundGeo = new THREE.PlaneGeometry(200, 200);
-        const groundMat = new THREE.MeshStandardMaterial({ color: 0x0f172a });
-        const ground = new THREE.Mesh(groundGeo, groundMat);
+        // --- 3. AMBIENTE URBANO (Realista/Opaco) ---
+        // Asfalto
+        const roadMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.9 });
+        const ground = new THREE.Mesh(new THREE.PlaneGeometry(300, 300), roadMat);
         ground.rotation.x = -Math.PI / 2;
         ground.receiveShadow = true;
         scene.add(ground);
 
-        // Função para criar edifícios Cyberpunk
-        function createBuilding(x, z, w, h, d) {
-            const geo = new THREE.BoxGeometry(w, h, d);
-            const mat = new THREE.MeshStandardMaterial({ 
-                color: 0x1e293b, 
-                transparent: true, 
-                opacity: 0.8,
-                roughness: 0.2
-            });
-            const block = new THREE.Mesh(geo, mat);
-            block.position.set(x, h/2, z);
-            block.receiveShadow = true;
-            block.castShadow = true;
+        // Função para criar passeios e prédios
+        function buildBlock(x, z, bWidth, bDepth) {
+            // Passeio
+            const sidewalk = new THREE.Mesh(
+                new THREE.BoxGeometry(bWidth + 4, 1, bDepth + 4), 
+                new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 1.0 })
+            );
+            sidewalk.position.set(x, 0.5, z);
+            sidewalk.receiveShadow = true;
+            scene.add(sidewalk);
 
-            // Arestas brilhantes do edifício
-            const edges = new THREE.EdgesGeometry(geo);
-            const lineMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, linewidth: 2 });
-            const line = new THREE.LineSegments(edges, lineMat);
-            block.add(line);
-
-            scene.add(block);
+            // Prédio Opaco
+            const height = Math.random() * 20 + 20;
+            const building = new THREE.Mesh(
+                new THREE.BoxGeometry(bWidth, height, bDepth),
+                new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.8 })
+            );
+            building.position.set(x, height/2 + 1, z);
+            building.castShadow = true;
+            building.receiveShadow = true;
+            scene.add(building);
         }
-        
-        createBuilding(-30, -30, 30, 25, 30); // Fast Food
-        createBuilding(30, -30, 30, 40, 30);  // Loja
-        createBuilding(-30, 30, 30, 15, 30);  // Farmácia
-        createBuilding(30, 30, 30, 35, 30);   // Banco
 
-        // --- 5. SISTEMA DE NPCs HUMANIZADOS ---
+        // Quarteirões comerciais
+        buildBlock(-35, -35, 40, 40); // Fast Food (TL)
+        buildBlock(35, -35, 40, 40);  // Loja (TR)
+        buildBlock(-35, 35, 40, 40);  // Farmácia (BL)
+        buildBlock(35, 35, 40, 40);   // Banco (BR)
+
+        // Faixas de pedestres
+        function addCrosswalk(x, z, rot) {
+            const cw = new THREE.Mesh(
+                new THREE.PlaneGeometry(12, 18),
+                new THREE.MeshBasicMaterial({ color: 0xdddddd })
+            );
+            cw.rotation.x = -Math.PI/2;
+            cw.rotation.z = rot;
+            cw.position.set(x, 0.1, z);
+            scene.add(cw);
+        }
+        addCrosswalk(0, -13, Math.PI/2);
+        addCrosswalk(0, 13, Math.PI/2);
+        addCrosswalk(-13, 0, 0);
+        addCrosswalk(13, 0, 0);
+
+        // --- 4. CONTROLO PTZ PERSONALIZADO ---
+        let isDragging = false;
+        let previousMousePosition = { x: 0, y: 0 };
+        let startDragPos = { x: 0, y: 0 };
+        
+        let panAngle = 0; 
+        let tiltAngle = -0.3; // Olha ligeiramente para baixo
+
+        function updatePTZCamera() {
+            // A câmera fica presa no (0, 35, 70), rodamos o "LookAt" com Trigonometria
+            let targetX = camera.position.x + Math.sin(panAngle) * Math.cos(tiltAngle);
+            let targetY = camera.position.y + Math.sin(tiltAngle);
+            let targetZ = camera.position.z - Math.cos(panAngle) * Math.cos(tiltAngle);
+            camera.lookAt(targetX, targetY, targetZ);
+        }
+        updatePTZCamera();
+
+        gameArea.addEventListener('pointerdown', (e) => {
+            isDragging = true;
+            startDragPos = { x: e.clientX, y: e.clientY };
+            previousMousePosition = { x: e.clientX, y: e.clientY };
+        });
+
+        gameArea.addEventListener('pointermove', (e) => {
+            if(isDragging) {
+                let deltaX = e.clientX - previousMousePosition.x;
+                let deltaY = e.clientY - previousMousePosition.y;
+                
+                // Rotação Lenta (Simula a mecânica de motor de câmara)
+                panAngle -= deltaX * 0.002;
+                tiltAngle -= deltaY * 0.002;
+                
+                // Limites do Motor da Câmara (Batentes)
+                panAngle = Math.max(-Math.PI/3, Math.min(Math.PI/3, panAngle)); // Limite de virar o pescoço
+                tiltAngle = Math.max(-Math.PI/2.2, Math.min(-0.05, tiltAngle)); // Limite de olhar cima/baixo
+                
+                updatePTZCamera();
+                previousMousePosition = { x: e.clientX, y: e.clientY };
+            }
+            // Hover logic...
+            handleRaycastHover(e);
+        });
+
+        gameArea.addEventListener('wheel', (e) => {
+            // Zoom Óptico da Lente
+            camera.fov += e.deltaY * 0.05;
+            camera.fov = Math.max(15, Math.min(65, camera.fov)); 
+            camera.updateProjectionMatrix();
+        });
+
+        // --- 5. SISTEMA DE NPCs e NUDGE 3D ---
         const npcs = []; 
+        const npcBodyMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.6 });
+        
+        // Caminhos das calçadas
         const routes = [
-            { start: {x: -8, z: 60}, end: {x: -8, z: -60} },
-            { start: {x: 8, z: -60}, end: {x: 8, z: 60} },
-            { start: {x: -60, z: -8}, end: {x: 60, z: -8} },
-            { start: {x: 60, z: 8}, end: {x: -60, z: 8} }
+            { sx: -10, sz: 80, ex: -10, ez: -80 }, // Sobe Esquerda
+            { sx: 10, sz: -80, ex: 10, ez: 80 },   // Desce Direita
+            { sx: -80, sz: -10, ex: 80, ez: -10 }, // Esq para Dir Cima
+            { sx: 80, sz: 10, ex: -80, ez: 10 }    // Dir para Esq Baixo
         ];
 
-        // Geometrias partilhadas para otimização
-        const bodyGeo = new THREE.BoxGeometry(1.2, 2.5, 1.2);
-        const headGeo = new THREE.SphereGeometry(0.8, 16, 16);
-
         function createNPC() {
-            const npcGroup = new THREE.Group();
+            const group = new THREE.Group();
             
-            // É crítico instanciar o material aqui para que cada um mude de cor independentemente
-            const material = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, roughness: 0.4 });
-            
-            const body = new THREE.Mesh(bodyGeo, material);
-            body.position.y = 1.25;
+            const body = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 1.0, 3.5, 12), npcBodyMat.clone());
+            body.position.y = 1.75 + 1; // 1 é a altura do passeio
             body.castShadow = true;
-
-            const head = new THREE.Mesh(headGeo, material);
-            head.position.y = 3.3;
+            
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.7, 16, 16), body.material);
+            head.position.y = 4.2 + 1;
             head.castShadow = true;
 
-            npcGroup.add(body);
-            npcGroup.add(head);
+            group.add(body); group.add(head);
             
-            // Dados Corporativos no Grupo
-            npcGroup.userData = {
+            group.userData = {
                 id: "ID #" + Math.floor(Math.random()*90000 + 10000),
                 profissao: profissoes[Math.floor(Math.random()*profissoes.length)],
                 excedente: segredos[Math.floor(Math.random()*segredos.length)],
-                extraido: false,
-                velocidade: Math.random() * 0.08 + 0.04
+                extraido: false, isZumbi: false, isNudging: false, nudgePath: [],
+                speed: Math.random() * 0.1 + 0.05
             };
 
             const route = routes[Math.floor(Math.random() * routes.length)];
-            npcGroup.position.set(route.start.x, 0, route.start.z);
-            npcGroup.userData.dirX = Math.sign(route.end.x - route.start.x);
-            npcGroup.userData.dirZ = Math.sign(route.end.z - route.start.z);
+            group.position.set(route.sx, 0, route.sz);
+            group.userData.dirX = Math.sign(route.ex - route.sx);
+            group.userData.dirZ = Math.sign(route.ez - route.sz);
 
-            scene.add(npcGroup);
-            npcs.push(npcGroup);
+            // Alvos Forçados (para facilitar os testes)
+            if(contratoAtivo && Math.random() > 0.4) {
+                if(contratoAtivo.cliente === "Rede Fast Food") group.userData.excedente = 'Ar do ambiente (está de dieta)';
+                if(contratoAtivo.cliente === "AgiotaBank") group.userData.excedente = 'Procura empréstimo bancário';
+            }
+
+            scene.add(group); npcs.push(group);
         }
+        for(let i=0; i<10; i++) setTimeout(createNPC, i*1000);
+        setInterval(() => { if(npcs.length < 18) createNPC(); }, 2000);
 
-        for(let i=0; i<8; i++) { setTimeout(createNPC, i * 1200); }
-        setInterval(() => { if(npcs.length < 15) createNPC(); }, 2500);
-
-        // --- 6. INTERAÇÃO 3D (O ALGORITMO) ---
+        // --- 6. RAYCASTING E INTERAÇÃO ---
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
-        gameArea.addEventListener('pointerdown', (event) => {
+        function handleRaycastHover(e) {
+            if(isDragging) return;
             const rect = renderer.domElement.getBoundingClientRect();
-            mouse.x = ( ( event.clientX - rect.left ) / ( rect.width ) ) * 2 - 1;
-            mouse.y = - ( ( event.clientY - rect.top ) / ( rect.height ) ) * 2 + 1;
-
-            raycaster.setFromCamera(mouse, camera);
-            // O true permite verificar os meshes dentro do Group
-            const intersects = raycaster.intersectObjects(npcs, true); 
-
-            if (intersects.length > 0) {
-                const alvoGroup = intersects[0].object.parent; // Apanha o Group inteiro
-                focarAlvo(alvoGroup);
-            } else {
-                desativarAlvo();
-            }
-        });
-
-        // Hover Effect
-        gameArea.addEventListener('pointermove', (event) => {
-            const rect = renderer.domElement.getBoundingClientRect();
-            mouse.x = ( ( event.clientX - rect.left ) / ( rect.width ) ) * 2 - 1;
-            mouse.y = - ( ( event.clientY - rect.top ) / ( rect.height ) ) * 2 + 1;
+            mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
             raycaster.setFromCamera(mouse, camera);
             
             const intersects = raycaster.intersectObjects(npcs, true);
-            
-            npcs.forEach(group => {
-                if(group !== alvoAtual) {
-                    group.children.forEach(mesh => {
-                        mesh.material.color.setHex(group.userData.extraido ? 0x475569 : 0xcbd5e1);
-                        mesh.material.emissive.setHex(0x000000);
-                    });
-                }
+            npcs.forEach(g => {
+                if(g !== alvoAtual && !g.userData.isZumbi) g.children.forEach(m => m.material.emissive.setHex(0x000000));
             });
-
-            if (intersects.length > 0) {
-                const hoverGroup = intersects[0].object.parent;
-                if (hoverGroup !== alvoAtual) {
-                    hoverGroup.children.forEach(mesh => mesh.material.emissive.setHex(0x38bdf8));
-                }
+            if(intersects.length > 0) {
+                let g = intersects[0].object.parent;
+                if(g !== alvoAtual && !g.userData.isZumbi) g.children.forEach(m => m.material.emissive.setHex(0x333333));
                 document.body.style.cursor = 'crosshair';
-            } else {
-                document.body.style.cursor = 'default';
+            } else { document.body.style.cursor = 'default'; }
+        }
+
+        gameArea.addEventListener('pointerup', (e) => {
+            isDragging = false;
+            let dist = Math.hypot(e.clientX - startDragPos.x, e.clientY - startDragPos.y);
+            if(dist < 5) { // É um clique, não um drag
+                raycaster.setFromCamera(mouse, camera);
+                const intersects = raycaster.intersectObjects(npcs, true);
+                if(intersects.length > 0) { focarAlvo(intersects[0].object.parent); } 
+                else { desativarAlvo(); }
             }
         });
 
+        const btnAcao = document.getElementById('btn-acao');
+        
         function focarAlvo(group) {
-            if(alvoAtual && alvoAtual !== group) {
-                alvoAtual.children.forEach(mesh => mesh.material.emissive.setHex(0x000000));
-            }
-
-            alvoAtual = group;
-            // Destaca o alvo atual a vermelho
-            alvoAtual.children.forEach(mesh => mesh.material.emissive.setHex(0xf43f5e));
-
-            divConscientes.innerHTML = `
-                <div class="log-entry"><span class="key">ID Rastreio:</span> <span class="val">${group.userData.id}</span></div>
-                <div class="log-entry"><span class="key">Perfil:</span> <span class="val">${group.userData.profissao}</span></div>
-            `;
+            if(group.userData.isZumbi || group.userData.isNudging) return;
+            if(alvoAtual && alvoAtual !== group) alvoAtual.children.forEach(m => m.material.emissive.setHex(0x000000));
             
-            divExcedentes.innerHTML = `<div class="log-entry"><span class="key">Vulnerabilidade:</span> <span class="val">${group.userData.excedente}</span></div>`;
+            alvoAtual = group;
+            alvoAtual.children.forEach(m => m.material.emissive.setHex(0xf43f5e)); // Alvo vermelho
 
-            if (group.userData.extraido) {
-                divExcedentes.className = 'revealed-data'; 
-                btnAcao.innerText = "DADOS ESGOTADOS"; 
-                btnAcao.style.backgroundColor = "#475569";
-                btnAcao.disabled = true;
-            } else {
-                divExcedentes.className = 'hidden-data'; 
-                btnAcao.innerText = "EXTRAIR DADOS"; 
-                btnAcao.style.backgroundColor = "var(--text-alert)";
-                btnAcao.disabled = false;
+            document.getElementById('dados-conscientes').innerHTML = `
+                <div class="log-entry"><span class="key">ID:</span> <span class="val">${group.userData.id}</span></div>
+                <div class="log-entry"><span class="key">Perfil:</span> <span class="val">${group.userData.profissao}</span></div>`;
+            
+            const exDiv = document.getElementById('dados-excedentes');
+            exDiv.innerHTML = `<div class="log-entry"><span class="key">Vulnerabilidade:</span> <span class="val">${group.userData.excedente}</span></div>`;
+
+            btnAcao.disabled = false;
+            if (faseAtual === 1) {
+                if(group.userData.extraido) {
+                    exDiv.className = 'revealed-data'; btnAcao.innerText = "JÁ EXTRAÍDO"; btnAcao.disabled = true; btnAcao.style.background = "#475569";
+                } else {
+                    exDiv.className = 'hidden-data'; btnAcao.innerText = "EXTRAIR DADOS"; btnAcao.style.background = "var(--text-alert)";
+                }
+            } else if (faseAtual === 2) {
+                exDiv.className = 'revealed-data'; btnAcao.innerText = "VENDER PREVISÃO"; btnAcao.style.background = "var(--text-warning)";
+            } else if (faseAtual === 3) {
+                exDiv.className = 'revealed-data'; btnAcao.innerText = contratoAtivo.nudgeMsg || "ENVIAR NUDGE"; btnAcao.style.background = "var(--text-nudge)";
             }
         }
 
         function desativarAlvo() {
-            if (alvoAtual) {
-                alvoAtual.children.forEach(mesh => mesh.material.emissive.setHex(0x000000));
-            }
+            if (alvoAtual && !alvoAtual.userData.isZumbi) alvoAtual.children.forEach(m => m.material.emissive.setHex(0x000000));
             alvoAtual = null;
-            divConscientes.innerHTML = 'Aguardando seleção...';
-            divExcedentes.innerHTML = 'Nenhum alvo selecionado.';
-            divExcedentes.className = 'hidden-data';
-            btnAcao.disabled = true;
-            btnAcao.innerText = "AGUARDANDO ALVO";
-            btnAcao.style.backgroundColor = "#475569";
+            document.getElementById('dados-conscientes').innerHTML = 'Aguardando seleção...';
+            document.getElementById('dados-excedentes').innerHTML = 'Nenhum alvo selecionado.';
+            document.getElementById('dados-excedentes').className = 'hidden-data';
+            btnAcao.disabled = true; btnAcao.innerText = "AGUARDANDO ALVO"; btnAcao.style.background = "#475569";
+        }
+
+        // --- 7. CONTRATOS E LÓGICA DAS FASES ---
+        const contratosFase2 = [
+            { cliente: "Seguradora", desc: "Ache perfis de risco (Ansiedade/Medo).", validador: (n) => n.userData.excedente.includes('Ansiedade') || n.userData.excedente.includes('Medo'), valor: 800 }
+        ];
+        const contratosFase3 = [
+            { cliente: "Rede Fast Food", desc: "Ache vulnerável fazendo dieta. Envie cupom irresistível 90% OFF.", validador: (n) => n.userData.excedente.includes('dieta'), nudgeMsg: "DISPARAR CUPOM RELÂMPAGO", dest: {x: -30, z: -10}, corner: {x: -10, z: -10}, valor: 3000 },
+            { cliente: "AgiotaBank", desc: "Ache quem busca empréstimo. Envie crédito pré-aprovado no celular.", validador: (n) => n.userData.excedente.includes('empréstimo'), nudgeMsg: "ENVIAR ALERTA DE CRÉDITO", dest: {x: 30, z: 10}, corner: {x: 10, z: 10}, valor: 5000 }
+        ];
+
+        function gerarNovoContrato() {
+            let lista = faseAtual === 2 ? contratosFase2 : contratosFase3;
+            contratoAtivo = lista[Math.floor(Math.random() * lista.length)];
+            document.getElementById('c-cliente').innerText = contratoAtivo.cliente;
+            document.getElementById('c-desc').innerText = contratoAtivo.desc;
+        }
+
+        function notificarLucro(val) {
+            lucro += val;
+            const el = document.getElementById('lucro-display');
+            el.innerText = `$ ${lucro.toFixed(2)}`; el.style.color = "var(--text-success)";
+            setTimeout(() => el.style.color = "var(--text-warning)", 500);
         }
 
         btnAcao.addEventListener('click', () => {
-            if(!alvoAtual || alvoAtual.userData.extraido) return;
+            if(!alvoAtual) return;
+            let alvo = alvoAtual; // Guarda referência
 
-            divExcedentes.classList.replace('hidden-data', 'revealed-data');
-            let extraidoAgora = Math.floor(Math.random() * 50) + 15;
-            scoreDados += extraidoAgora;
-            
-            scoreDisplay.innerText = `${scoreDados} GB`;
-            btnAcao.innerText = `COLETADO (+${extraidoAgora} GB)`; 
-            btnAcao.style.backgroundColor = "var(--text-success)"; 
-            btnAcao.disabled = true;
-            
-            alvoAtual.userData.extraido = true;
-            
-            // Zumbificação 3D do alvo
-            alvoAtual.children.forEach(mesh => {
-                mesh.material.color.setHex(0x475569);
-                mesh.material.emissive.setHex(0x000000);
-            });
-            alvoAtual.userData.velocidade *= 0.3; // Fica muito lento, como que drenado
+            if(faseAtual === 1) {
+                document.getElementById('dados-excedentes').classList.replace('hidden-data', 'revealed-data');
+                let extraido = Math.floor(Math.random()*40)+10;
+                scoreDados += extraido;
+                document.getElementById('score-display').innerText = `${scoreDados} GB`;
+                btnAcao.innerText = "COLETADO"; btnAcao.disabled = true; alvo.userData.extraido = true;
+                if(scoreDados >= META_FASE_1) setTimeout(() => { document.getElementById('modal-overlay').style.display='flex'; document.getElementById('modal-fase2').style.display='block'; }, 800);
+            }
+            else if(faseAtual === 2) {
+                if(contratoAtivo.validador(alvo)) {
+                    notificarLucro(contratoAtivo.valor);
+                    btnAcao.innerText = "VENDIDO!"; btnAcao.disabled = true;
+                    // Zumbificação (Extraído ao limite)
+                    alvo.userData.isZumbi = true;
+                    alvo.children.forEach(m => { m.material.color.setHex(0x475569); m.material.emissive.setHex(0x000000); });
+                    alvo.userData.speed *= 0.3;
+                    desativarAlvo(); gerarNovoContrato();
+                    if(lucro >= META_FASE_2) setTimeout(() => { document.getElementById('modal-overlay').style.display='flex'; document.getElementById('modal-fase3').style.display='block'; }, 800);
+                } else { btnAcao.innerText = "ALVO INCORRETO"; btnAcao.disabled = true; }
+            }
+            else if(faseAtual === 3) {
+                if(contratoAtivo.validador(alvo)) {
+                    btnAcao.innerText = "MANIPULAÇÃO ATIVA!"; btnAcao.disabled = true;
+                    alvo.userData.isNudging = true;
+                    alvo.children.forEach(m => m.material.emissive.setHex(0xa855f7)); // Cor do Nudge
+                    
+                    // ALGORITMO FÍSICO DO NUDGE (Ele caminha até à loja)
+                    alvo.userData.nudgePath = [
+                        { x: contratoAtivo.corner.x, z: contratoAtivo.corner.z }, // Vai pra esquina
+                        { x: contratoAtivo.dest.x, z: contratoAtivo.dest.z }      // Entra na porta
+                    ];
+                    desativarAlvo();
+                } else { btnAcao.innerText = "GATILHO INÚTIL"; btnAcao.disabled = true; }
+            }
         });
 
-        // --- 7. LOOP DE RENDERIZAÇÃO ---
+        // --- 8. LOOP DE ANIMAÇÃO NATIVA ---
         function animate() {
             requestAnimationFrame(animate);
 
             for (let i = npcs.length - 1; i >= 0; i--) {
                 let npc = npcs[i];
                 
-                if (npc !== alvoAtual) {
-                    npc.position.x += npc.userData.dirX * npc.userData.velocidade;
-                    npc.position.z += npc.userData.dirZ * npc.userData.velocidade;
+                // Rotina de Nudge (Fase 3)
+                if (npc.userData.isNudging && npc.userData.nudgePath.length > 0) {
+                    let target = npc.userData.nudgePath[0];
+                    let dx = target.x - npc.position.x;
+                    let dz = target.z - npc.position.z;
+                    let dist = Math.hypot(dx, dz);
+                    
+                    if (dist < 1.0) {
+                        npc.userData.nudgePath.shift(); // Chegou no waypoint
+                        if(npc.userData.nudgePath.length === 0) {
+                            // Entrou na loja!
+                            scene.remove(npc); npcs.splice(i, 1);
+                            notificarLucro(contratoAtivo.valor); nudgesConcluidos++;
+                            if(nudgesConcluidos >= 2) { setTimeout(() => { document.getElementById('modal-overlay').style.display='flex'; document.getElementById('final-screen').style.display='block';}, 1000); }
+                            else { gerarNovoContrato(); }
+                            continue;
+                        }
+                    } else {
+                        // Caminha forçadamente para o destino
+                        npc.position.x += (dx / dist) * 0.3;
+                        npc.position.z += (dz / dist) * 0.3;
+                    }
+                } 
+                // Comportamento normal de quem não é alvo focado
+                else if (npc !== alvoAtual) {
+                    npc.position.x += npc.userData.dirX * npc.userData.speed;
+                    npc.position.z += npc.userData.dirZ * npc.userData.speed;
                 }
 
-                if (Math.abs(npc.position.x) > 65 || Math.abs(npc.position.z) > 65) {
-                    scene.remove(npc);
-                    npcs.splice(i, 1);
+                // Limpeza se for muito longe
+                if (Math.abs(npc.position.x) > 100 || Math.abs(npc.position.z) > 100) {
+                    scene.remove(npc); npcs.splice(i, 1);
                 }
             }
-
-            controls.update(); 
             renderer.render(scene, camera);
         }
 
-        window.addEventListener('resize', () => {
-            camera.aspect = gameArea.clientWidth / gameArea.clientHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(gameArea.clientWidth, gameArea.clientHeight);
-        });
-
+        window.addEventListener('resize', () => { camera.aspect = gameArea.clientWidth / gameArea.clientHeight; camera.updateProjectionMatrix(); renderer.setSize(gameArea.clientWidth, gameArea.clientHeight); });
+        
+        function iniciarFase2() { faseAtual = 2; document.getElementById('modal-overlay').style.display='none'; document.getElementById('modal-fase2').style.display='none'; document.getElementById('fase-display').innerText="FASE 2: PREVISÃO"; document.getElementById('fase-display').style.color="var(--text-warning)"; document.getElementById('contrato-box').style.display='block'; document.getElementById('score-display').style.display='none'; document.getElementById('lucro-display').style.display='block'; desativarAlvo(); gerarNovoContrato(); }
+        function iniciarFase3() { faseAtual = 3; document.getElementById('modal-overlay').style.display='none'; document.getElementById('modal-fase3').style.display='none'; document.getElementById('fase-display').innerText="FASE 3: NUDGE"; document.getElementById('fase-display').style.color="var(--text-nudge)"; document.getElementById('titulo-contrato').innerText="Contrato de Modificação"; document.getElementById('contrato-box').style.borderColor="var(--text-nudge)"; desativarAlvo(); gerarNovoContrato(); }
+        
         animate();
     </script>
 </body>
