@@ -18,6 +18,13 @@
         .scanline { position: absolute; width: 100%; height: 100%; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.2) 50%); background-size: 100% 4px; pointer-events: none; z-index: 50; }
         .vignette { position: absolute; width: 100%; height: 100%; box-shadow: 0 0 200px rgba(0,0,0,0.8) inset; pointer-events: none; z-index: 49; }
         .camera-ui { position: absolute; top: 20px; left: 20px; z-index: 51; font-size: 14px; color: rgba(255, 255, 255, 0.8); text-shadow: 0 0 2px #000; pointer-events: none; }
+        
+        /* Controles de Câmera UI */
+        #cam-controls { position: absolute; top: 85px; left: 20px; z-index: 52; display: flex; gap: 5px; }
+        .cam-btn { background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border-color); color: var(--text-main); padding: 5px 10px; font-family: inherit; font-size: 0.8rem; cursor: pointer; border-radius: 3px; transition: all 0.2s; }
+        .cam-btn:hover { background: rgba(56, 189, 248, 0.2); }
+        .cam-btn.active { background: var(--text-main); color: #000; font-weight: bold; border-color: var(--text-main); }
+
         .controls-hint { position: absolute; bottom: 20px; left: 20px; z-index: 51; font-size: 12px; color: rgba(255, 255, 255, 0.6); pointer-events: none; background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 4px; }
         .crosshair { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 40px; height: 40px; border: 1px solid rgba(255,255,255,0.3); border-radius: 50%; pointer-events: none; z-index: 51;}
         .rec-dot { display: inline-block; width: 10px; height: 10px; background-color: #f43f5e; border-radius: 50%; margin-right: 5px; animation: blink 1s infinite; }
@@ -91,19 +98,28 @@
         <div class="vignette"></div>
         <div class="scanline"></div>
         <div class="crosshair"></div>
+        
         <div class="camera-ui">
-            CÂMARA DE VIGILÂNCIA PTZ-04<br>
+            <span id="cam-name">REDE DATACORP - CÂMARA 01 (SUL)</span><br>
             Avenida Principal - SMART CITY<br>
             <span style="color: #f43f5e;"><span class="rec-dot"></span><span id="clock">00:00:00</span></span><br>
             <span id="traffic-status" style="color: #10b981;">TRÂNSITO: FLUXO EIXO X</span>
         </div>
+
+        <div id="cam-controls">
+            <button class="cam-btn active" id="btn-cam1" onclick="switchCam(0)">CAM 1</button>
+            <button class="cam-btn" id="btn-cam2" onclick="switchCam(1)">CAM 2</button>
+            <button class="cam-btn" id="btn-cam3" onclick="switchCam(2)">CAM 3</button>
+            <button class="cam-btn" id="btn-cam4" onclick="switchCam(3)">CAM 4</button>
+        </div>
+
         <div class="controls-hint">
-            [MOVER O RATO] Guiar Câmera | [SCROLL] Zoom | [CLIQUE] Inspecionar Alvo | <strong>[ESPAÇO] Executar Ação</strong>
+            [1 ao 4] Mudar Câmera | [RATO] Guiar Câmera | [CLIQUE] Inspecionar | <strong>[ESPAÇO] Ação</strong>
         </div>
     </div>
 
     <div id="dashboard">
-        <h1>DATACORP OS v7.0</h1>
+        <h1>DATACORP OS v8.0</h1>
         <div class="status-box">
             <div class="dash-header-row">
                 <div class="data-title">Banco de Dados</div>
@@ -129,11 +145,19 @@
     </div>
 
     <script>
-        // --- 0. GERADOR DE EFEITOS SONOROS ---
+        // --- 0. ÁUDIO (Mantido da versão anterior, com som para a câmera) ---
         let audioCtx = null;
         function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
         document.body.addEventListener('pointerdown', initAudio, { once: true });
         document.body.addEventListener('keydown', initAudio, { once: true });
+
+        function playSwitchSound() {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+            osc.type = 'square'; osc.frequency.setValueAtTime(200, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.1);
+            gain.gain.setValueAtTime(0.05, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+            osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+        }
 
         function playZoomSound() {
             if (!audioCtx) return;
@@ -164,7 +188,7 @@
             osc2.connect(gain2); gain2.connect(audioCtx.destination); osc2.start(audioCtx.currentTime + 0.1); osc2.stop(audioCtx.currentTime + 0.6);
         }
 
-        // --- 1. DADOS DE JOGO ---
+        // --- 1. DADOS E FLUXO ---
         setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString(); }, 1000);
         const profissoes = ['Estudante', 'Professor', 'Contabilista', 'Programador', 'Desempregado', 'Motorista', 'Enfermeiro'];
         const segredos = ['Tem dívidas ocultas', 'Pesquisou sobre insónias hoje', 'Ansiedade severa', 'Procura empréstimo bancário', 'Medo de demissão'];
@@ -173,16 +197,12 @@
         const META_FASE_1 = 150; const META_FASE_2 = 1500;
         let alvoAtual = null; let contratoAtivo = null; let isPaused = false; 
 
-        // TRÂNSITO (Semáforo)
-        let isGreenX = true; // true = X move, Z para. false = Z move, X para.
+        let isGreenX = true; 
         setInterval(() => {
             isGreenX = !isGreenX;
             const tStatus = document.getElementById('traffic-status');
-            if(isGreenX) {
-                tStatus.innerText = "TRÂNSITO: FLUXO EIXO X"; tStatus.style.color = "#10b981";
-            } else {
-                tStatus.innerText = "TRÂNSITO: FLUXO EIXO Z"; tStatus.style.color = "#f59e0b";
-            }
+            if(isGreenX) { tStatus.innerText = "TRÂNSITO: FLUXO EIXO X"; tStatus.style.color = "#10b981"; } 
+            else { tStatus.innerText = "TRÂNSITO: FLUXO EIXO Z"; tStatus.style.color = "#f59e0b"; }
         }, 8000);
 
         // --- 2. CONFIGURAÇÃO THREE.JS ---
@@ -192,9 +212,6 @@
         scene.fog = new THREE.FogExp2(0x8892b0, 0.005); 
 
         const camera = new THREE.PerspectiveCamera(45, gameArea.clientWidth / gameArea.clientHeight, 0.1, 1000);
-        // CÂMERA MAIS BAIXA E REALISTA (Altura de poste: 15m)
-        camera.position.set(0, 15, 60); 
-
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(gameArea.clientWidth, gameArea.clientHeight);
         renderer.shadowMap.enabled = true;
@@ -207,12 +224,11 @@
         sunLight.shadow.mapSize.width = 2048; sunLight.shadow.mapSize.height = 2048;
         scene.add(sunLight);
 
-        // --- 3. AMBIENTE URBANO (Adensado) ---
+        // --- 3. AMBIENTE URBANO (Zebra Crossings) ---
         const roadMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.9 });
         const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), roadMat);
         ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
 
-        // Função para gerar quarteirões com múltiplos prédios
         const bMats = [
             new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.8 }),
             new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.7 }),
@@ -220,73 +236,121 @@
         ];
 
         function buildComplexBlock(centerX, centerZ, w, d) {
-            // Passeio Base
             const sidewalk = new THREE.Mesh(new THREE.BoxGeometry(w, 1, d), new THREE.MeshStandardMaterial({ color: 0x555555 }));
             sidewalk.position.set(centerX, 0.5, centerZ); sidewalk.receiveShadow = true; scene.add(sidewalk);
-
-            // Adicionar 2 a 4 prédios variados sobre este passeio
             const numBuildings = Math.floor(Math.random() * 3) + 2;
             for(let i=0; i<numBuildings; i++) {
                 let bw = (w / 2) - 2; let bd = (d / 2) - 2;
                 let bh = Math.random() * 25 + 10;
                 let mat = bMats[Math.floor(Math.random() * bMats.length)];
-                
                 let b = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), mat);
-                // Posições espalhadas pelo quarteirão
-                let ox = (Math.random() > 0.5 ? 1 : -1) * (bw/2 + 1);
-                let oz = (Math.random() > 0.5 ? 1 : -1) * (bd/2 + 1);
-                
-                b.position.set(centerX + ox, bh/2 + 1, centerZ + oz);
-                b.castShadow = true; b.receiveShadow = true; scene.add(b);
+                let ox = (Math.random() > 0.5 ? 1 : -1) * (bw/2 + 1); let oz = (Math.random() > 0.5 ? 1 : -1) * (bd/2 + 1);
+                b.position.set(centerX + ox, bh/2 + 1, centerZ + oz); b.castShadow = true; b.receiveShadow = true; scene.add(b);
             }
         }
+        buildComplexBlock(-45, -45, 60, 60); buildComplexBlock(45, -45, 60, 60);  
+        buildComplexBlock(-45, 45, 60, 60);  buildComplexBlock(45, 45, 60, 60);   
 
-        // 4 grandes áreas de quarteirões
-        buildComplexBlock(-45, -45, 60, 60); // TL
-        buildComplexBlock(45, -45, 60, 60);  // TR
-        buildComplexBlock(-45, 45, 60, 60);  // BL
-        buildComplexBlock(45, 45, 60, 60);   // BR
+        // NOVA FUNÇÃO: Faixa de Pedestres estilo Zebra
+        function addZebraCrosswalk(cx, cz, rot) {
+            const group = new THREE.Group();
+            const numStripes = 8;
+            const stripeWidth = 1.0;
+            const stripeLength = 12;
+            const spacing = 1.0;
+            const totalWidth = (numStripes * stripeWidth) + ((numStripes - 1) * spacing);
+            const startX = -totalWidth / 2 + stripeWidth / 2;
 
-        // Faixas de Pedestres Ajustadas para as esquinas dos passeios (±15)
-        function addCrosswalk(x, z, rot) {
-            const cw = new THREE.Mesh(new THREE.PlaneGeometry(14, 20), new THREE.MeshBasicMaterial({ color: 0xdddddd }));
-            cw.rotation.x = -Math.PI/2; cw.rotation.z = rot; cw.position.set(x, 0.1, z); scene.add(cw);
+            const mat = new THREE.MeshBasicMaterial({ color: 0xdddddd });
+            const geo = new THREE.PlaneGeometry(stripeWidth, stripeLength);
+
+            for(let i=0; i<numStripes; i++) {
+                let stripe = new THREE.Mesh(geo, mat);
+                stripe.position.set(startX + i * (stripeWidth + spacing), 0, 0);
+                group.add(stripe);
+            }
+
+            group.rotation.x = -Math.PI / 2;
+            group.rotation.z = rot;
+            // Posiciona ligeiramente acima do chão para não haver Z-fighting
+            group.position.set(cx, 0.15, cz);
+            scene.add(group);
         }
-        addCrosswalk(0, -15, Math.PI/2); addCrosswalk(0, 15, Math.PI/2);
-        addCrosswalk(-15, 0, 0); addCrosswalk(15, 0, 0);
 
-        // --- 4. SISTEMA DE CARROS (Trânsito) ---
+        // Adicionar as passadeiras raiadas em cada via de cruzamento
+        addZebraCrosswalk(0, -17, Math.PI/2);
+        addZebraCrosswalk(0, 17, Math.PI/2);
+        addZebraCrosswalk(-17, 0, 0);
+        addZebraCrosswalk(17, 0, 0);
+
+        // --- 4. SISTEMA DE CARROS ---
         const cars = [];
         const carGeo = new THREE.BoxGeometry(3, 2, 6);
         const carMats = [new THREE.MeshStandardMaterial({color: 0xef4444}), new THREE.MeshStandardMaterial({color: 0x3b82f6}), new THREE.MeshStandardMaterial({color: 0xffffff}), new THREE.MeshStandardMaterial({color: 0x10b981})];
 
         function spawnCar() {
-            let car = new THREE.Mesh(carGeo, carMats[Math.floor(Math.random()*carMats.length)]);
-            car.castShadow = true;
+            let car = new THREE.Mesh(carGeo, carMats[Math.floor(Math.random()*carMats.length)]); car.castShadow = true;
+            let headlights = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.5, 0.2), new THREE.MeshBasicMaterial({color: 0xffffee})); headlights.position.set(0, -0.2, 3); car.add(headlights);
+            let taillights = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.5, 0.2), new THREE.MeshBasicMaterial({color: 0xff0000})); taillights.position.set(0, -0.2, -3); car.add(taillights);
+            car.userData.brakeLights = taillights.material; 
             
-            // Luzes
-            let headlights = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.5, 0.2), new THREE.MeshBasicMaterial({color: 0xffffee}));
-            headlights.position.set(0, -0.2, 3); car.add(headlights);
-            let taillights = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.5, 0.2), new THREE.MeshBasicMaterial({color: 0xff0000}));
-            taillights.position.set(0, -0.2, -3); car.add(taillights);
-            car.userData.brakeLights = taillights.material; // Para brilhar ao frear
-
-            // 4 Faixas
             let lane = Math.floor(Math.random() * 4);
             if(lane === 0) { car.position.set(-100, 1, 6); car.userData = { axis: 'X', dir: 1, baseSpeed: 0.6 }; car.rotation.y = Math.PI/2; }
             else if(lane === 1) { car.position.set(100, 1, -6); car.userData = { axis: 'X', dir: -1, baseSpeed: 0.6 }; car.rotation.y = -Math.PI/2; }
             else if(lane === 2) { car.position.set(-6, 1, -100); car.userData = { axis: 'Z', dir: 1, baseSpeed: 0.6 }; car.rotation.y = 0; }
             else if(lane === 3) { car.position.set(6, 1, 100); car.userData = { axis: 'Z', dir: -1, baseSpeed: 0.6 }; car.rotation.y = Math.PI; }
-
-            car.userData.speed = car.userData.baseSpeed;
-            scene.add(car); cars.push(car);
+            car.userData.speed = car.userData.baseSpeed; scene.add(car); cars.push(car);
         }
         setInterval(() => { if(cars.length < 12 && !isPaused) spawnCar(); }, 3000);
 
-        // --- 5. CONTROLO PTZ CONTÍNUO ---
-        let panAngle = 0; let tiltAngle = -0.15; // Ajustado para câmera mais baixa
-        let targetPan = 0; let targetTilt = -0.15;
-        let zoomThrottle = 0;
+        // --- 5. REDE DE CÂMERAS PTZ ---
+        // Posições baseadas nos quatro cantos do cruzamento a espiar o centro
+        const cameraNetwork = [
+            { name: "REDE DATACORP - CÂMARA 01 (SUL)", pos: {x: 0, y: 15, z: 60}, basePan: 0, baseTilt: -0.15 },
+            { name: "REDE DATACORP - CÂMARA 02 (OESTE)", pos: {x: -60, y: 15, z: 0}, basePan: -Math.PI/2, baseTilt: -0.15 },
+            { name: "REDE DATACORP - CÂMARA 03 (LESTE)", pos: {x: 60, y: 15, z: 0}, basePan: Math.PI/2, baseTilt: -0.15 },
+            { name: "REDE DATACORP - CÂMARA 04 (NORTE)", pos: {x: 0, y: 15, z: -60}, basePan: Math.PI, baseTilt: -0.15 }
+        ];
+        
+        let currentCamIndex = 0;
+        let basePan = cameraNetwork[0].basePan;
+        let baseTilt = cameraNetwork[0].baseTilt;
+        let panAngle = basePan; 
+        let tiltAngle = baseTilt; 
+        let targetPan = basePan; 
+        let targetTilt = baseTilt;
+        let mouseX = 0; 
+        let mouseY = 0;
+
+        // Inicializar câmera 1
+        camera.position.set(cameraNetwork[0].pos.x, cameraNetwork[0].pos.y, cameraNetwork[0].pos.z);
+
+        window.switchCam = function(index) {
+            initAudio(); playSwitchSound();
+            currentCamIndex = index;
+            let cam = cameraNetwork[index];
+            
+            // Move a câmera física
+            camera.position.set(cam.pos.x, cam.pos.y, cam.pos.z);
+            
+            // Redefine as direções base
+            basePan = cam.basePan;
+            baseTilt = cam.baseTilt;
+            
+            // Atualiza os painéis UI
+            document.getElementById('cam-name').innerText = cam.name;
+            
+            document.querySelectorAll('.cam-btn').forEach((btn, i) => {
+                if(i === index) btn.classList.add('active');
+                else btn.classList.remove('active');
+            });
+            
+            // Recalcula o target imediatamente para não varrer a rua sem querer
+            targetPan = basePan + mouseX * (Math.PI / 2.5);
+            targetTilt = baseTilt - (mouseY * 0.25);
+            panAngle = targetPan;
+            tiltAngle = targetTilt;
+        };
 
         function updatePTZCamera() {
             let targetX = camera.position.x + Math.sin(panAngle) * Math.cos(tiltAngle);
@@ -294,35 +358,43 @@
             let targetZ = camera.position.z - Math.cos(panAngle) * Math.cos(tiltAngle);
             camera.lookAt(targetX, targetY, targetZ);
         }
-        updatePTZCamera();
 
         const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2();
+        const mouseVector = new THREE.Vector2();
 
         gameArea.addEventListener('pointermove', (e) => {
             const rect = renderer.domElement.getBoundingClientRect();
-            let mx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-            let my = ((e.clientY - rect.top) / rect.height) * 2 - 1;
+            // Guarda as proporções puras do mouse
+            mouseX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+            mouseY = ((e.clientY - rect.top) / rect.height) * 2 - 1;
             
-            targetPan = mx * (Math.PI / 2.5); // Giro mais amplo horizontal
-            targetTilt = -0.1 - (my * 0.25);  // Giro vertical
+            // O alvo de rotação é a Rotação Base da Câmera Atual + O offset do rato
+            targetPan = basePan + mouseX * (Math.PI / 2.5); 
+            targetTilt = baseTilt - (mouseY * 0.25); 
             
-            mouse.x = mx; mouse.y = -my;
+            mouseVector.x = mouseX; mouseVector.y = -mouseY;
             handleRaycastHover();
         });
 
         gameArea.addEventListener('wheel', (e) => {
             camera.fov += e.deltaY * 0.05; camera.fov = Math.max(15, Math.min(65, camera.fov)); camera.updateProjectionMatrix();
-            let now = Date.now(); if (now - zoomThrottle > 50) { playZoomSound(); zoomThrottle = now; }
+            let now = Date.now(); if (now - window.zoomThrottle > 50) { playZoomSound(); window.zoomThrottle = now; }
         });
 
         gameArea.addEventListener('pointerdown', (e) => {
-            initAudio(); raycaster.setFromCamera(mouse, camera);
+            initAudio(); raycaster.setFromCamera(mouseVector, camera);
             const intersects = raycaster.intersectObjects(npcs, true);
             if(intersects.length > 0) { focarAlvo(intersects[0].object.parent); } else { desativarAlvo(); }
         });
 
         window.addEventListener('keydown', (e) => {
+            initAudio();
+            // Atalhos 1 a 4 para trocar câmeras rapidamente
+            if(e.key === '1') switchCam(0);
+            if(e.key === '2') switchCam(1);
+            if(e.key === '3') switchCam(2);
+            if(e.key === '4') switchCam(3);
+
             if (e.code === 'Space' || e.key === 'e' || e.key === 'E') {
                 e.preventDefault(); if (!btnAcao.disabled) btnAcao.click();
             }
@@ -331,8 +403,6 @@
         // --- 6. SISTEMA DE NPCs ---
         const npcs = []; 
         const npcBodyMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.6 });
-        
-        // Rotas de pedestres nos passeios (ajustado para os novos blocos de 60x60)
         const pRoutes = [
             { sx: -14, sz: 80, ex: -14, ez: -80 }, { sx: 14, sz: -80, ex: 14, ez: 80 },   
             { sx: -80, sz: -14, ex: 80, ez: -14 }, { sx: 80, sz: 14, ex: -80, ez: 14 }    
@@ -369,7 +439,7 @@
 
         // --- 7. LÓGICA DE JOGO ---
         function handleRaycastHover() {
-            raycaster.setFromCamera(mouse, camera);
+            raycaster.setFromCamera(mouseVector, camera);
             const intersects = raycaster.intersectObjects(npcs, true);
             npcs.forEach(g => { if(g !== alvoAtual && !g.userData.isZumbi) g.children.forEach(m => m.material.emissive.setHex(0x000000)); });
             if(intersects.length > 0) {
@@ -385,7 +455,7 @@
             if(alvoAtual && alvoAtual !== group) alvoAtual.children.forEach(m => m.material.emissive.setHex(0x000000));
             
             alvoAtual = group; alvoAtual.children.forEach(m => m.material.emissive.setHex(0xf43f5e)); 
-            isPaused = true; // Para o tempo
+            isPaused = true; 
 
             document.getElementById('dados-conscientes').innerHTML = `<div class="log-entry"><span class="key">ID:</span> <span class="val">${group.userData.id}</span></div><div class="log-entry"><span class="key">Perfil:</span> <span class="val">${group.userData.profissao}</span></div>`;
             const exDiv = document.getElementById('dados-excedentes');
@@ -454,38 +524,31 @@
         });
 
         // --- 8. LOOP DE ANIMAÇÃO ---
+        window.zoomThrottle = 0;
         function animate() {
             requestAnimationFrame(animate);
 
             panAngle += (targetPan - panAngle) * 0.05; tiltAngle += (targetTilt - tiltAngle) * 0.05; updatePTZCamera();
 
-            // Animação Carros (Trânsito e Semáforo)
             for (let i = cars.length - 1; i >= 0; i--) {
                 let c = cars[i];
                 if(!isPaused) {
                     let isMyLightGreen = (c.userData.axis === 'X') ? isGreenX : !isGreenX;
                     let pos = c.userData.axis === 'X' ? c.position.x : c.position.z;
-                    // Área de travagem antes do cruzamento (aprox 25 a 15 metros antes do centro 0)
-                    let distToIntersection = c.userData.dir > 0 ? (-15 - pos) : (pos - 15);
+                    let distToIntersection = c.userData.dir > 0 ? (-17 - pos) : (pos - 17);
                     
                     if (!isMyLightGreen && distToIntersection > 0 && distToIntersection < 35) {
-                        c.userData.speed *= 0.85; // Freia suavemente
-                        c.userData.brakeLights.color.setHex(0xff0000); // Acende luz forte
+                        c.userData.speed *= 0.85; c.userData.brakeLights.color.setHex(0xff0000); 
                     } else {
-                        c.userData.speed = c.userData.baseSpeed;
-                        c.userData.brakeLights.color.setHex(0x550000); // Apaga luz de freio
+                        c.userData.speed = c.userData.baseSpeed; c.userData.brakeLights.color.setHex(0x550000); 
                     }
 
                     if(c.userData.axis === 'X') c.position.x += c.userData.dir * c.userData.speed;
                     else c.position.z += c.userData.dir * c.userData.speed;
                 }
-
-                if (Math.abs(c.position.x) > 120 || Math.abs(c.position.z) > 120) {
-                    scene.remove(c); cars.splice(i, 1);
-                }
+                if (Math.abs(c.position.x) > 120 || Math.abs(c.position.z) > 120) { scene.remove(c); cars.splice(i, 1); }
             }
 
-            // Animação Pedestres
             for (let i = npcs.length - 1; i >= 0; i--) {
                 let npc = npcs[i];
                 if (npc.userData.isNudging && npc.userData.nudgePath.length > 0) {
@@ -498,7 +561,7 @@
                             if(nudgesConcluidos >= 2) { setTimeout(() => { document.getElementById('modal-overlay').style.display='flex'; document.getElementById('final-screen').style.display='block'; isPaused=true;}, 1000); }
                             else { gerarNovoContrato(); } continue;
                         }
-                    } else { npc.position.x += (dx / dist) * 0.15; npc.position.z += (dz / dist) * 0.15; } // Caminha forçado
+                    } else { npc.position.x += (dx / dist) * 0.15; npc.position.z += (dz / dist) * 0.15; } 
                 } 
                 else if (!isPaused) {
                     npc.position.x += npc.userData.dirX * npc.userData.speed; npc.position.z += npc.userData.dirZ * npc.userData.speed;
