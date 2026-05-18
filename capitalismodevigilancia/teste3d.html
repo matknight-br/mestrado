@@ -12,14 +12,17 @@
 
         body { margin: 0; padding: 0; font-family: 'Courier New', Courier, monospace; background-color: var(--bg-color); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
 
-        /* A área 3D vai ocupar este espaço */
         #game-area { flex: 1; position: relative; border-right: 2px solid var(--border-color); overflow: hidden; }
 
-        .scanline { position: absolute; width: 100%; height: 100%; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%); background-size: 100% 4px; pointer-events: none; z-index: 50; }
+        /* Filtro de Câmera PTZ aprimorado */
+        .scanline { position: absolute; width: 100%; height: 100%; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.35) 50%); background-size: 100% 4px; pointer-events: none; z-index: 50; }
+        .vignette { position: absolute; width: 100%; height: 100%; box-shadow: 0 0 150px rgba(0,0,0,0.9) inset; pointer-events: none; z-index: 49; }
         .camera-ui { position: absolute; top: 20px; left: 20px; z-index: 51; font-size: 14px; color: rgba(56, 189, 248, 0.9); text-shadow: 0 0 5px var(--text-main); pointer-events: none; }
         .controls-hint { position: absolute; bottom: 20px; left: 20px; z-index: 51; font-size: 12px; color: #94a3b8; pointer-events: none; }
+        .rec-dot { display: inline-block; width: 10px; height: 10px; background-color: #f43f5e; border-radius: 50%; margin-right: 5px; animation: blink 1s infinite; }
+        @keyframes blink { 0% {opacity: 1;} 50% {opacity: 0;} 100% {opacity: 1;} }
 
-        /* Dashboard de Controlo (mantido igual) */
+        /* Dashboard */
         #dashboard { width: 350px; background-color: var(--panel-bg); padding: 20px; display: flex; flex-direction: column; box-shadow: -5px 0 15px rgba(0,0,0,0.5); z-index: 60; }
         h1 { font-size: 1.2rem; text-align: center; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-top: 0; color: #fff; }
         .status-box { background-color: #0f172a; border: 1px solid var(--border-color); padding: 15px; margin-bottom: 20px; border-radius: 5px; }
@@ -46,19 +49,20 @@
 <body>
 
     <div id="game-area">
+        <div class="vignette"></div>
         <div class="scanline"></div>
         <div class="camera-ui">
-            SISTEMA DATACORP - CÂMARA PTZ 3D<br>
-            LOCAL: ZONA COMERCIAL<br>
-            <span id="clock" style="color: #f43f5e;">00:00:00 REC</span>
+            SISTEMA DATACORP - CÂMARA PTZ 01<br>
+            LOCAL: ZONA COMERCIAL [DIGITAL TWIN]<br>
+            <span style="color: #f43f5e;"><span class="rec-dot"></span><span id="clock">00:00:00</span></span>
         </div>
         <div class="controls-hint">
-            [RATO ESQUERDO] Rodar Câmara | [RATO DIREITO] Mover | [SCROLL] Zoom | [CLIQUE NO BONECO] Selecionar Alvo
+            [RATO ESQUERDO] Rotação PTZ | [SCROLL] Lente de Zoom | [CLIQUE NO ALVO] Extrair Dados
         </div>
     </div>
 
     <div id="dashboard">
-        <h1>DATACORP OS v4.0 (3D)</h1>
+        <h1>DATACORP OS v4.1</h1>
         <div class="status-box">
             <div class="dash-header-row">
                 <div class="data-title">Banco de Dados</div>
@@ -78,9 +82,9 @@
     </div>
 
     <script>
-        // --- CONFIGURAÇÃO DA UI HTML ---
+        // --- CONFIGURAÇÃO DA UI ---
         const clockEl = document.getElementById('clock');
-        setInterval(() => { clockEl.innerText = new Date().toLocaleTimeString() + " REC"; }, 1000);
+        setInterval(() => { clockEl.innerText = new Date().toLocaleTimeString(); }, 1000);
 
         let alvoAtual = null;
         let scoreDados = 0;
@@ -90,177 +94,214 @@
         const btnAcao = document.getElementById('btn-acao');
         const scoreDisplay = document.getElementById('score-display');
 
-        // Dados simulados
-        const profissoes = ['Estudante', 'Professor', 'Contabilista', 'Programador', 'Desempregado'];
-        const segredos = ['Tem dívidas ocultas', 'Pesquisou sobre insónias hoje', 'Ansiedade severa', 'Procura emprego ativamente'];
+        const profissoes = ['Estudante', 'Professor', 'Contabilista', 'Programador', 'Desempregado', 'Enfermeiro'];
+        const segredos = ['Tem dívidas ocultas', 'Pesquisou sobre insónias hoje', 'Ansiedade severa', 'Procura empréstimo bancário', 'Medo de demissão'];
 
-        // --- 1. CONFIGURAÇÃO BÁSICA DO THREE.JS ---
+        // --- 1. CONFIGURAÇÃO DO THREE.JS ---
         const gameArea = document.getElementById('game-area');
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x1a2235); // Cor do céu/fundo
+        scene.background = new THREE.Color(0x0f172a); // Fundo escuro cibernético
+        scene.fog = new THREE.Fog(0x0f172a, 30, 150); // Nevoeiro para profundidade
 
-        // Câmara
-        const camera = new THREE.PerspectiveCamera(60, gameArea.clientWidth / gameArea.clientHeight, 0.1, 1000);
-        camera.position.set(0, 40, 50); // Posição inicial estilo CCTV
+        const camera = new THREE.PerspectiveCamera(50, gameArea.clientWidth / gameArea.clientHeight, 0.1, 1000);
+        camera.position.set(0, 35, 60); // Posição elevada da câmera
 
-        // Renderizador
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(gameArea.clientWidth, gameArea.clientHeight);
         renderer.shadowMap.enabled = true;
         gameArea.appendChild(renderer.domElement);
 
-        // Controlos PTZ (OrbitControls)
+        // --- 2. CONTROLOS PTZ REALISTAS ---
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
-        controls.maxPolarAngle = Math.PI / 2.2; // Não deixa ir para baixo do chão
-        controls.minDistance = 10;
-        controls.maxDistance = 100;
+        
+        // Bloqueia o "arrastar" da câmera (a câmera PTZ está fixa num poste)
+        controls.enablePan = false; 
+        
+        // Reduz a velocidade para dar a sensação de peso dos motores da câmera
+        controls.rotateSpeed = 0.2; 
+        
+        // Restringe o zoom (Lente)
+        controls.minDistance = 15;
+        controls.maxDistance = 80;
 
-        // --- 2. ILUMINAÇÃO ---
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        // Restringe o ângulo Vertical (Tilt) - não deixa olhar para o céu nem enterrar no chão
+        controls.minPolarAngle = Math.PI / 4; // Máximo para cima
+        controls.maxPolarAngle = Math.PI / 2.2; // Máximo para baixo
+
+        // Restringe o ângulo Horizontal (Pan) a cerca de 160 graus na frente do poste
+        controls.minAzimuthAngle = -Math.PI / 2.2;
+        controls.maxAzimuthAngle = Math.PI / 2.2;
+
+        // --- 3. ILUMINAÇÃO ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
         scene.add(ambientLight);
+        
+        const spotLight = new THREE.SpotLight(0x38bdf8, 1);
+        spotLight.position.set(0, 80, 20);
+        spotLight.angle = Math.PI / 4;
+        spotLight.penumbra = 0.5;
+        spotLight.castShadow = true;
+        scene.add(spotLight);
 
-        const dirLight = new THREE.DirectionalLight(0x38bdf8, 0.8);
-        dirLight.position.set(20, 50, 20);
-        dirLight.castShadow = true;
-        scene.add(dirLight);
+        // --- 4. CENÁRIO: THE DIGITAL TWIN ---
+        // Grelha Holográfica do chão
+        const gridHelper = new THREE.GridHelper(200, 50, 0x38bdf8, 0x1e293b);
+        gridHelper.position.y = 0.1;
+        scene.add(gridHelper);
 
-        // --- 3. CONSTRUÇÃO DO CENÁRIO (A Cidade) ---
-        // O Chão (Rua)
         const groundGeo = new THREE.PlaneGeometry(200, 200);
-        const groundMat = new THREE.MeshStandardMaterial({ color: 0x262c3a });
+        const groundMat = new THREE.MeshStandardMaterial({ color: 0x0f172a });
         const ground = new THREE.Mesh(groundGeo, groundMat);
         ground.rotation.x = -Math.PI / 2;
         ground.receiveShadow = true;
         scene.add(ground);
 
-        // Quarteirões (Passeios/Prédios base)
-        function createBlock(x, z, w, d, color) {
-            const geo = new THREE.BoxGeometry(w, 2, d);
-            const mat = new THREE.MeshStandardMaterial({ color: color });
+        // Função para criar edifícios Cyberpunk
+        function createBuilding(x, z, w, h, d) {
+            const geo = new THREE.BoxGeometry(w, h, d);
+            const mat = new THREE.MeshStandardMaterial({ 
+                color: 0x1e293b, 
+                transparent: true, 
+                opacity: 0.8,
+                roughness: 0.2
+            });
             const block = new THREE.Mesh(geo, mat);
-            block.position.set(x, 1, z);
+            block.position.set(x, h/2, z);
             block.receiveShadow = true;
+            block.castShadow = true;
+
+            // Arestas brilhantes do edifício
+            const edges = new THREE.EdgesGeometry(geo);
+            const lineMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, linewidth: 2 });
+            const line = new THREE.LineSegments(edges, lineMat);
+            block.add(line);
+
             scene.add(block);
         }
         
-        // Quatro quarteirões
-        createBlock(-30, -30, 40, 40, 0x475569); // Top-Left
-        createBlock(30, -30, 40, 40, 0x475569);  // Top-Right
-        createBlock(-30, 30, 40, 40, 0x475569);  // Bottom-Left
-        createBlock(30, 30, 40, 40, 0x475569);   // Bottom-Right
+        createBuilding(-30, -30, 30, 25, 30); // Fast Food
+        createBuilding(30, -30, 30, 40, 30);  // Loja
+        createBuilding(-30, 30, 30, 15, 30);  // Farmácia
+        createBuilding(30, 30, 30, 35, 30);   // Banco
 
-        // --- 4. SISTEMA DE NPCs 3D ---
-        const npcs = []; // Array para guardar os objetos e as lógicas
+        // --- 5. SISTEMA DE NPCs HUMANIZADOS ---
+        const npcs = []; 
         const routes = [
-            { start: {x: -8, z: 50}, end: {x: -8, z: -50} }, // Sobe passeio esquerdo
-            { start: {x: 8, z: -50}, end: {x: 8, z: 50} },   // Desce passeio direito
-            { start: {x: -50, z: -8}, end: {x: 50, z: -8} }, // Esquerda p/ Direita
-            { start: {x: 50, z: 8}, end: {x: -50, z: 8} }    // Direita p/ Esquerda
+            { start: {x: -8, z: 60}, end: {x: -8, z: -60} },
+            { start: {x: 8, z: -60}, end: {x: 8, z: 60} },
+            { start: {x: -60, z: -8}, end: {x: 60, z: -8} },
+            { start: {x: 60, z: 8}, end: {x: -60, z: 8} }
         ];
 
+        // Geometrias partilhadas para otimização
+        const bodyGeo = new THREE.BoxGeometry(1.2, 2.5, 1.2);
+        const headGeo = new THREE.SphereGeometry(0.8, 16, 16);
+
         function createNPC() {
-            // Geometria do "indivíduo" (um cilindro simples simulando um corpo)
-            const geometry = new THREE.CylinderGeometry(1.5, 1.5, 6, 16);
-            const material = new THREE.MeshStandardMaterial({ color: 0xcbd5e1 });
-            const mesh = new THREE.Mesh(geometry, material);
-            mesh.castShadow = true;
+            const npcGroup = new THREE.Group();
             
-            // Dados Corporativos do NPC
-            mesh.userData = {
-                id: "Indivíduo #" + Math.floor(Math.random()*9000 + 1000),
+            // É crítico instanciar o material aqui para que cada um mude de cor independentemente
+            const material = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, roughness: 0.4 });
+            
+            const body = new THREE.Mesh(bodyGeo, material);
+            body.position.y = 1.25;
+            body.castShadow = true;
+
+            const head = new THREE.Mesh(headGeo, material);
+            head.position.y = 3.3;
+            head.castShadow = true;
+
+            npcGroup.add(body);
+            npcGroup.add(head);
+            
+            // Dados Corporativos no Grupo
+            npcGroup.userData = {
+                id: "ID #" + Math.floor(Math.random()*90000 + 10000),
                 profissao: profissoes[Math.floor(Math.random()*profissoes.length)],
                 excedente: segredos[Math.floor(Math.random()*segredos.length)],
                 extraido: false,
-                velocidade: Math.random() * 0.1 + 0.05
+                velocidade: Math.random() * 0.08 + 0.04
             };
 
-            // Escolhe rota aleatória
             const route = routes[Math.floor(Math.random() * routes.length)];
-            mesh.position.set(route.start.x, 3, route.start.z);
-            mesh.userData.endZ = route.end.z;
-            mesh.userData.endX = route.end.x;
-            
-            // Lógica de direção
-            mesh.userData.dirX = Math.sign(route.end.x - route.start.x);
-            mesh.userData.dirZ = Math.sign(route.end.z - route.start.z);
+            npcGroup.position.set(route.start.x, 0, route.start.z);
+            npcGroup.userData.dirX = Math.sign(route.end.x - route.start.x);
+            npcGroup.userData.dirZ = Math.sign(route.end.z - route.start.z);
 
-            scene.add(mesh);
-            npcs.push(mesh);
+            scene.add(npcGroup);
+            npcs.push(npcGroup);
         }
 
-        // Gerar NPCs iniciais e num intervalo
-        for(let i=0; i<8; i++) { setTimeout(createNPC, i * 1500); }
-        setInterval(() => { if(npcs.length < 15) createNPC(); }, 3000);
+        for(let i=0; i<8; i++) { setTimeout(createNPC, i * 1200); }
+        setInterval(() => { if(npcs.length < 15) createNPC(); }, 2500);
 
-        // --- 5. INTERAÇÃO 3D (RAYCASTER) ---
+        // --- 6. INTERAÇÃO 3D (O ALGORITMO) ---
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
-        // Converte o clique no ecrã para o espaço 3D
         gameArea.addEventListener('pointerdown', (event) => {
-            // Calcular posição do rato (de -1 a +1)
             const rect = renderer.domElement.getBoundingClientRect();
             mouse.x = ( ( event.clientX - rect.left ) / ( rect.width ) ) * 2 - 1;
             mouse.y = - ( ( event.clientY - rect.top ) / ( rect.height ) ) * 2 + 1;
 
             raycaster.setFromCamera(mouse, camera);
-
-            // Verifica se o laser "tocou" em algum NPC
-            const intersects = raycaster.intersectObjects(npcs);
+            // O true permite verificar os meshes dentro do Group
+            const intersects = raycaster.intersectObjects(npcs, true); 
 
             if (intersects.length > 0) {
-                // Focámos num alvo!
-                const alvoMesh = intersects[0].object;
-                focarAlvo(alvoMesh);
+                const alvoGroup = intersects[0].object.parent; // Apanha o Group inteiro
+                focarAlvo(alvoGroup);
             } else {
                 desativarAlvo();
             }
         });
 
-        // Efeito Hover (Muda a cor quando passa o rato)
+        // Hover Effect
         gameArea.addEventListener('pointermove', (event) => {
             const rect = renderer.domElement.getBoundingClientRect();
             mouse.x = ( ( event.clientX - rect.left ) / ( rect.width ) ) * 2 - 1;
             mouse.y = - ( ( event.clientY - rect.top ) / ( rect.height ) ) * 2 + 1;
             raycaster.setFromCamera(mouse, camera);
             
-            const intersects = raycaster.intersectObjects(npcs);
+            const intersects = raycaster.intersectObjects(npcs, true);
             
-            // Restaura cor de todos
-            npcs.forEach(n => {
-                if(n !== alvoAtual) {
-                    n.material.color.setHex(n.userData.extraido ? 0x475569 : 0xcbd5e1);
-                    n.material.emissive.setHex(0x000000); // Tira o brilho
+            npcs.forEach(group => {
+                if(group !== alvoAtual) {
+                    group.children.forEach(mesh => {
+                        mesh.material.color.setHex(group.userData.extraido ? 0x475569 : 0xcbd5e1);
+                        mesh.material.emissive.setHex(0x000000);
+                    });
                 }
             });
 
-            // Aplica hover
-            if (intersects.length > 0 && intersects[0].object !== alvoAtual) {
-                intersects[0].object.material.emissive.setHex(0x38bdf8); // Brilho azul
+            if (intersects.length > 0) {
+                const hoverGroup = intersects[0].object.parent;
+                if (hoverGroup !== alvoAtual) {
+                    hoverGroup.children.forEach(mesh => mesh.material.emissive.setHex(0x38bdf8));
+                }
                 document.body.style.cursor = 'crosshair';
             } else {
                 document.body.style.cursor = 'default';
             }
         });
 
-        // Lógica de UI para o alvo
-        function focarAlvo(mesh) {
-            // Tira a cor de destaque do alvo anterior
-            if(alvoAtual && alvoAtual !== mesh) {
-                alvoAtual.material.emissive.setHex(0x000000);
+        function focarAlvo(group) {
+            if(alvoAtual && alvoAtual !== group) {
+                alvoAtual.children.forEach(mesh => mesh.material.emissive.setHex(0x000000));
             }
 
-            alvoAtual = mesh;
-            alvoAtual.material.emissive.setHex(0xf43f5e); // Fica vermelho vivo ao ser focado
+            alvoAtual = group;
+            // Destaca o alvo atual a vermelho
+            alvoAtual.children.forEach(mesh => mesh.material.emissive.setHex(0xf43f5e));
 
             divConscientes.innerHTML = `
-                <div class="log-entry"><span class="key">ID Rastreio:</span> <span class="val">${mesh.userData.id}</span></div>
-                <div class="log-entry"><span class="key">Perfil:</span> <span class="val">${mesh.userData.profissao}</span></div>
+                <div class="log-entry"><span class="key">ID Rastreio:</span> <span class="val">${group.userData.id}</span></div>
+                <div class="log-entry"><span class="key">Perfil:</span> <span class="val">${group.userData.profissao}</span></div>
             `;
             
-            divExcedentes.innerHTML = `<div class="log-entry"><span class="key">Vulnerabilidade:</span> <span class="val">${mesh.userData.excedente}</span></div>`;
+            divExcedentes.innerHTML = `<div class="log-entry"><span class="key">Vulnerabilidade:</span> <span class="val">${group.userData.excedente}</span></div>`;
 
-            if (mesh.userData.extraido) {
+            if (group.userData.extraido) {
                 divExcedentes.className = 'revealed-data'; 
                 btnAcao.innerText = "DADOS ESGOTADOS"; 
                 btnAcao.style.backgroundColor = "#475569";
@@ -274,7 +315,9 @@
         }
 
         function desativarAlvo() {
-            if (alvoAtual) alvoAtual.material.emissive.setHex(0x000000);
+            if (alvoAtual) {
+                alvoAtual.children.forEach(mesh => mesh.material.emissive.setHex(0x000000));
+            }
             alvoAtual = null;
             divConscientes.innerHTML = 'Aguardando seleção...';
             divExcedentes.innerHTML = 'Nenhum alvo selecionado.';
@@ -298,45 +341,43 @@
             
             alvoAtual.userData.extraido = true;
             
-            // Efeito visual no 3D: o boneco "morre/zumbifica", ficando cinzento escuro
-            alvoAtual.material.color.setHex(0x475569);
-            alvoAtual.material.emissive.setHex(0x000000);
-            alvoAtual.userData.velocidade *= 0.3; // Fica muito lento
+            // Zumbificação 3D do alvo
+            alvoAtual.children.forEach(mesh => {
+                mesh.material.color.setHex(0x475569);
+                mesh.material.emissive.setHex(0x000000);
+            });
+            alvoAtual.userData.velocidade *= 0.3; // Fica muito lento, como que drenado
         });
 
-        // --- 6. LOOP DE ANIMAÇÃO 3D ---
+        // --- 7. LOOP DE RENDERIZAÇÃO ---
         function animate() {
             requestAnimationFrame(animate);
 
-            // Move os NPCs
             for (let i = npcs.length - 1; i >= 0; i--) {
                 let npc = npcs[i];
                 
-                // Se for o alvoAtual, ele para de andar (trava da câmara)
                 if (npc !== alvoAtual) {
                     npc.position.x += npc.userData.dirX * npc.userData.velocidade;
                     npc.position.z += npc.userData.dirZ * npc.userData.velocidade;
                 }
 
-                // Se passou dos limites, apaga da memória (despawn)
-                if (Math.abs(npc.position.x) > 60 || Math.abs(npc.position.z) > 60) {
+                if (Math.abs(npc.position.x) > 65 || Math.abs(npc.position.z) > 65) {
                     scene.remove(npc);
                     npcs.splice(i, 1);
                 }
             }
 
-            controls.update(); // Atualiza controlos do rato
-            renderer.render(scene, camera); // Desenha o frame
+            controls.update(); 
+            renderer.render(scene, camera);
         }
 
-        // Ajusta a tela quando a janela muda de tamanho
         window.addEventListener('resize', () => {
             camera.aspect = gameArea.clientWidth / gameArea.clientHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(gameArea.clientWidth, gameArea.clientHeight);
         });
 
-        animate(); // Inicia o jogo
+        animate();
     </script>
 </body>
 </html>
