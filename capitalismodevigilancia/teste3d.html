@@ -71,7 +71,7 @@
             <div class="modal-title">ATUALIZAÇÃO: FASE 2</div>
             <p>Os servidores estão cheios de dados. Está na hora de gerar lucros.</p>
             <p style="color: var(--text-alert);"><strong>Novo Objetivo: Mercado de Futuros.</strong></p>
-            <p>Venda a certeza do que as pessoas farão. Identifique na multidão os alvos exatos pedidos pelos nossos clientes corporativos.</p>
+            <p>Identifique na multidão os alvos exatos pedidos pelos nossos clientes corporativos e venda a previsão do comportamento deles.</p>
             <button class="modal-btn" onclick="iniciarFase2()">ATIVAR PREVISÃO</button>
         </div>
         <div class="modal-content" id="modal-fase3" style="display: none;">
@@ -118,7 +118,7 @@
     </div>
 
     <div id="dashboard">
-        <h1>DATACORP OS v9.0</h1>
+        <h1>DATACORP 3D v1.5</h1>
         <div class="status-box">
             <div class="dash-header-row">
                 <div class="data-title">Banco de Dados</div>
@@ -199,6 +199,7 @@
         const META_FASE_1 = 150; const META_FASE_2 = 1500;
         let alvoAtual = null; let contratoAtivo = null; let isPaused = false; 
 
+        // TRÂNSITO (Semáforo)
         let isGreenX = true; 
         setInterval(() => {
             isGreenX = !isGreenX;
@@ -214,23 +215,21 @@
         scene.fog = new THREE.FogExp2(0x8892b0, 0.006); 
 
         const camera = new THREE.PerspectiveCamera(45, gameArea.clientWidth / gameArea.clientHeight, 0.1, 1000);
-        // Desativado Antialias para ganho expressivo de performance
         const renderer = new THREE.WebGLRenderer({ antialias: false }); 
         renderer.setSize(gameArea.clientWidth, gameArea.clientHeight);
         renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.BasicShadowMap; // Sombras mais leves
+        renderer.shadowMap.type = THREE.BasicShadowMap; 
         gameArea.appendChild(renderer.domElement);
 
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); scene.add(ambientLight);
         const sunLight = new THREE.DirectionalLight(0xfff5e6, 0.8);
         sunLight.position.set(50, 100, 30); 
         sunLight.castShadow = true;
-        sunLight.shadow.mapSize.width = 1024; // Otimizado
+        sunLight.shadow.mapSize.width = 1024; 
         sunLight.shadow.mapSize.height = 1024;
         scene.add(sunLight);
 
-        // --- 3. AMBIENTE URBANO (Material Otimizado) ---
-        // Uso de Lambert em vez de Standard poupa muito processamento
+        // --- 3. AMBIENTE URBANO ---
         const roadMat = new THREE.MeshLambertMaterial({ color: 0x222222 });
         const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), roadMat);
         ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
@@ -244,7 +243,6 @@
             const sidewalk = new THREE.Mesh(new THREE.BoxGeometry(w + 12, 1, d + 12), new THREE.MeshLambertMaterial({ color: 0x555555 }));
             sidewalk.position.set(centerX, 0.5, centerZ); sidewalk.receiveShadow = true; scene.add(sidewalk);
             
-            // Apenas 2 prédios por quarteirão
             for(let i=0; i<2; i++) {
                 let bw = (w / 2) - 2; let bd = (d / 2) - 2; let bh = Math.random() * 20 + 15;
                 let b = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), bMats[i%2]);
@@ -256,7 +254,6 @@
         buildComplexBlock(-50, -50, 50, 50); buildComplexBlock(50, -50, 50, 50);  
         buildComplexBlock(-50, 50, 50, 50);  buildComplexBlock(50, 50, 50, 50);   
 
-        // Passadeiras corrigidas: Rotações ajustadas de forma lógica e alinhada ao asfalto
         function addZebraCrosswalk(cx, cz, rot) {
             const group = new THREE.Group();
             const numStripes = 8; const stripeWidth = 1.0; const stripeLength = 12; const spacing = 1.2;
@@ -274,14 +271,12 @@
             group.rotation.z = rot; 
             group.position.set(cx, 0.15, cz); scene.add(group);
         }
-        // Eixo X (Norte/Sul) -> Listras devem acompanhar o eixo Z. Rotação Z = 0
         addZebraCrosswalk(0, -21, 0); 
         addZebraCrosswalk(0, 21, 0);
-        // Eixo Z (Leste/Oeste) -> Listras devem acompanhar o eixo X. Rotação Z = 90 deg
         addZebraCrosswalk(-21, 0, Math.PI/2); 
         addZebraCrosswalk(21, 0, Math.PI/2);
 
-        // --- 4. PRÉ-CACHE DE EMOJIS (Fim do Travamento) ---
+        // --- 4. PRÉ-CACHE DE EMOJIS ---
         const emojiCache = {};
         function preloadEmojis() {
             arquetipos.forEach(arq => {
@@ -297,9 +292,7 @@
         }
         preloadEmojis();
 
-        function getEmojiSprite(emoji) {
-            return new THREE.Sprite(emojiCache[emoji]);
-        }
+        function getEmojiSprite(emoji) { return new THREE.Sprite(emojiCache[emoji]); }
 
         // --- 5. SISTEMA DE CARROS OTIMIZADO ---
         const cars = [];
@@ -308,17 +301,19 @@
 
         function spawnCar() {
             let car = new THREE.Mesh(carGeo, carMats[Math.floor(Math.random()*carMats.length)]); 
-            // Sombras desativadas nos carros para poupar renderização
             car.castShadow = false; 
             let headlights = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.5, 0.2), new THREE.MeshBasicMaterial({color: 0xffffee})); headlights.position.set(0, -0.2, 3); car.add(headlights);
             let taillights = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.5, 0.2), new THREE.MeshBasicMaterial({color: 0xff0000})); taillights.position.set(0, -0.2, -3); car.add(taillights);
+            
+            // CORREÇÃO CRÍTICA DO BUG DE COLISÃO DO USERDATA
             car.userData.brakeLights = taillights.material; 
             
             let lane = Math.floor(Math.random() * 4);
-            if(lane === 0) { car.position.set(-100, 1, 6); car.userData = { axis: 'X', dir: 1, baseSpeed: 0.6 }; car.rotation.y = Math.PI/2; }
-            else if(lane === 1) { car.position.set(100, 1, -6); car.userData = { axis: 'X', dir: -1, baseSpeed: 0.6 }; car.rotation.y = -Math.PI/2; }
-            else if(lane === 2) { car.position.set(-6, 1, -100); car.userData = { axis: 'Z', dir: 1, baseSpeed: 0.6 }; car.rotation.y = 0; }
-            else if(lane === 3) { car.position.set(6, 1, 100); car.userData = { axis: 'Z', dir: -1, baseSpeed: 0.6 }; car.rotation.y = Math.PI; }
+            if(lane === 0) { car.position.set(-100, 1, 6); car.userData.axis = 'X'; car.userData.dir = 1; car.userData.baseSpeed = 0.6; car.rotation.y = Math.PI/2; }
+            else if(lane === 1) { car.position.set(100, 1, -6); car.userData.axis = 'X'; car.userData.dir = -1; car.userData.baseSpeed = 0.6; car.rotation.y = -Math.PI/2; }
+            else if(lane === 2) { car.position.set(-6, 1, -100); car.userData.axis = 'Z'; car.userData.dir = 1; car.userData.baseSpeed = 0.6; car.rotation.y = 0; }
+            else if(lane === 3) { car.position.set(6, 1, 100); car.userData.axis = 'Z'; car.userData.dir = -1; car.userData.baseSpeed = 0.6; car.rotation.y = Math.PI; }
+            
             car.userData.speed = car.userData.baseSpeed; scene.add(car); cars.push(car);
         }
         setInterval(() => { if(cars.length < 8 && !isPaused) spawnCar(); }, 3500);
@@ -377,7 +372,6 @@
 
         gameArea.addEventListener('pointerdown', (e) => {
             initAudio(); raycaster.setFromCamera(mouseVector, camera);
-            // Raycast Otimizado: Somente contra os corpos dos NPCs
             const intersects = raycaster.intersectObjects(npcBodies);
             if(intersects.length > 0) { focarAlvo(intersects[0].object.userData.parentGroup); } else { desativarAlvo(); }
         });
@@ -390,9 +384,9 @@
 
         // --- 7. SISTEMA DE NPCs OTIMIZADO ---
         const npcs = []; 
-        const npcBodies = []; // Cache rápido para o Raycaster
+        const npcBodies = []; 
         const sharedBodyGeo = new THREE.CylinderGeometry(0.7, 0.9, 3.2, 8); 
-        const sharedHeadGeo = new THREE.SphereGeometry(0.6, 8, 8); // Polígonos drasticamente reduzidos
+        const sharedHeadGeo = new THREE.SphereGeometry(0.6, 8, 8); 
         
         const pRoutes = [
             { sx: -19, sz: 80, ex: -19, ez: -80 }, { sx: 19, sz: -80, ex: 19, ez: 80 },   
@@ -406,9 +400,7 @@
             const mat = new THREE.MeshLambertMaterial({ color: 0x94a3b8 });
             
             const body = new THREE.Mesh(sharedBodyGeo, mat); body.position.y = 1.6 + 1;
-            // Apenas o corpo projeta sombra e é alvo do raycaster
-            body.castShadow = true; 
-            body.userData.parentGroup = group; 
+            body.castShadow = true; body.userData.parentGroup = group; 
             
             const head = new THREE.Mesh(sharedHeadGeo, mat); head.position.y = 3.8 + 1;
             
@@ -424,8 +416,7 @@
                 excedente: segredos[Math.floor(Math.random()*segredos.length)],
                 extraido: false, isZumbi: false, isNudging: false, nudgePath: [],
                 speed: Math.random() * 0.04 + 0.02,
-                bodyMesh: body,
-                headMesh: head
+                bodyMesh: body, headMesh: head
             };
 
             const route = pRoutes[Math.floor(Math.random() * pRoutes.length)];
@@ -578,7 +569,12 @@
                     if(c.userData.axis === 'X') c.position.x += c.userData.dir * c.userData.speed;
                     else c.position.z += c.userData.dir * c.userData.speed;
                 }
-                if (Math.abs(c.position.x) > 120 || Math.abs(c.position.z) > 120) { scene.remove(c); cars.splice(i, 1); }
+                if (Math.abs(c.position.x) > 120 || Math.abs(c.position.z) > 120) { 
+                    scene.remove(c); 
+                    c.children[0].material.dispose();
+                    c.children[1].material.dispose();
+                    cars.splice(i, 1); 
+                }
             }
 
             for (let i = npcs.length - 1; i >= 0; i--) {
