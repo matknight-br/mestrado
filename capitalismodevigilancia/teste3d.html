@@ -116,7 +116,7 @@
     </div>
 
     <div id="dashboard">
-        <h1>DATACORP OS v11.1</h1>
+        <h1>DATACORP OS v11.2</h1>
         <div class="status-box">
             <div class="dash-header-row">
                 <div class="data-title">Banco de Dados</div>
@@ -179,7 +179,7 @@
             }
         }
 
-        // --- 1. DADOS DE JOGO ---
+        // --- 1. DADOS DE JOGO E BANCO DE DADOS RICO ---
         setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString(); }, 1000);
         
         const arquetipos = [
@@ -235,7 +235,7 @@
         sunLight.shadow.mapSize.height = 1024;
         scene.add(sunLight);
 
-        // --- 3. AMBIENTE URBANO SEM SOBREPOSIÇÕES ---
+        // --- 3. AMBIENTE URBANO ---
         const roadMat = new THREE.MeshLambertMaterial({ color: 0x222222 });
         const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), roadMat);
         ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
@@ -245,40 +245,23 @@
             new THREE.MeshLambertMaterial({ color: 0x334155 })
         ];
 
-        // Lógica matematicamente perfeita para evitar o canto das lojas alvo
         function buildComplexBlock(centerX, centerZ, w, d) {
             const sidewalk = new THREE.Mesh(new THREE.BoxGeometry(w + 12, 1, d + 12), new THREE.MeshLambertMaterial({ color: 0x555555 }));
             sidewalk.position.set(centerX, 0.5, centerZ); sidewalk.receiveShadow = true; scene.add(sidewalk);
             
-            // Divide a área do quarteirão em 4 quadrantes internos
-            const offsets = [
-                {x: -15, z: -15}, {x: 15, z: -15},
-                {x: -15, z: 15},  {x: 15, z: 15}
-            ];
-
-            offsets.forEach(off => {
-                let bx = centerX + off.x;
-                let bz = centerZ + off.z;
-
-                // Descobre se este quadrante é o que está mais próximo da origem (0,0) do cruzamento
-                let isInnerCorner = (Math.sign(centerX) !== Math.sign(off.x)) && (Math.sign(centerZ) !== Math.sign(off.z));
-
-                // Se NÃO for a esquina interior, constrói um prédio cinzento
-                if (!isInnerCorner) {
-                    let bw = 20; let bd = 20; let bh = Math.random() * 20 + 15;
-                    let mat = bMats[Math.floor(Math.random() * bMats.length)];
-                    let b = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), mat);
-                    b.position.set(bx, bh/2 + 1, bz);
-                    b.castShadow = true; b.receiveShadow = true; scene.add(b);
-                }
-            });
+            for(let i=0; i<2; i++) {
+                let bw = (w / 2) - 2; let bd = (d / 2) - 2; let bh = Math.random() * 20 + 15;
+                let mat = bMats[Math.floor(Math.random() * bMats.length)];
+                let b = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), mat);
+                let ox = (Math.random() > 0.5 ? 1 : -1) * (bw/2 + 10); let oz = (Math.random() > 0.5 ? 1 : -1) * (bd/2 + 10);
+                b.position.set(centerX + ox, bh/2 + 1, centerZ + oz); b.castShadow = true; b.receiveShadow = true; scene.add(b);
+            }
         }
         
         buildComplexBlock(-50, -50, 50, 50); buildComplexBlock(50, -50, 50, 50);  
         buildComplexBlock(-50, 50, 50, 50);  buildComplexBlock(50, 50, 50, 50);   
 
         function createLandmarkBuilding(cx, cz, hexColor) {
-            // A loja agora tem espaço livre e não fica sobreposta!
             const geo = new THREE.BoxGeometry(16, 22, 16);
             const mat = new THREE.MeshLambertMaterial({ color: hexColor });
             const b = new THREE.Mesh(geo, mat);
@@ -292,7 +275,6 @@
             return b;
         }
 
-        // As lojas âncora nas esquinas perfeitas
         createLandmarkBuilding(-35, -35, 0xef4444); // Fast Food
         createLandmarkBuilding(35, -35, 0xec4899);  // Loja
         createLandmarkBuilding(-35, 35, 0x10b981);  // Farmácia
@@ -468,7 +450,7 @@
                 bodyMesh: body, headMesh: head,
                 axis: route.axis, dirX: Math.sign(route.ex - route.sx), dirZ: Math.sign(route.ez - route.sz)
             };
-            group.userData.speed = group.userData.baseSpeed; group.position.set(route.sx, 0, route.sz);
+            group.position.set(route.sx, 0, route.sz);
 
             if(contratoAtivo && Math.random() > 0.4) {
                 if(contratoAtivo.cliente === "Rede Fast Food") group.userData.excedente["Almoço Ontem"] = 'Ar do ambiente (está de dieta)';
@@ -489,7 +471,7 @@
             npcGroup.userData.bodyMesh.material.dispose();
         }
 
-        // --- 8. LÓGICA DE JOGO ---
+        // --- 8. LÓGICA DE JOGO E VALIDADORES ---
         function handleRaycastHover() {
             raycaster.setFromCamera(mouseVector, camera);
             const intersects = raycaster.intersectObjects(npcBodies);
@@ -593,11 +575,23 @@
                 if(contratoAtivo.validador(alvo)) {
                     playSound('nudge'); btnAcao.innerText = "MANIPULAÇÃO ATIVA!"; btnAcao.disabled = true;
                     alvo.userData.isNudging = true; 
-                    alvo.userData.speed = 0.02;
-                    alvo.userData.bodyMesh.material.emissive.setHex(0xa855f7); alvo.userData.headMesh.material.emissive.setHex(0xa855f7); 
-                    alvo.children[2].material.opacity = 0.5; 
+                    
+                    alvo.userData.bodyMesh.material.emissive.setHex(0xa855f7); 
+                    alvo.userData.headMesh.material.emissive.setHex(0xa855f7); 
 
-                    alvo.userData.nudgePath = [{ x: contratoAtivo.corner.x, z: contratoAtivo.corner.z }, { x: contratoAtivo.dest.x, z: contratoAtivo.dest.z }];
+                    // ALGORITMO ORTOGONAL DO NUDGE (SEGUE A CALÇADA E ATRAVESSA A RUA)
+                    let path = [];
+                    if (alvo.userData.axis === 'Z') {
+                        path.push({ x: alvo.position.x, z: contratoAtivo.corner.z });
+                        path.push({ x: contratoAtivo.corner.x, z: contratoAtivo.corner.z });
+                    } else {
+                        path.push({ x: contratoAtivo.corner.x, z: alvo.position.z });
+                        path.push({ x: contratoAtivo.corner.x, z: contratoAtivo.corner.z });
+                    }
+                    path.push({ x: contratoAtivo.dest.x, z: contratoAtivo.dest.z });
+                    
+                    alvo.userData.nudgePath = path;
+                    
                     setTimeout(() => { desativarAlvo(); }, 600);
                 } else { btnAcao.innerText = "GATILHO INÚTIL"; btnAcao.disabled = true; setTimeout(() => { desativarAlvo(); }, 600); }
             }
@@ -654,8 +648,12 @@
                 if(npc.children[2]) npc.children[2].lookAt(camera.position);
 
                 if (npc.userData.isNudging && npc.userData.nudgePath.length > 0) {
-                    let target = npc.userData.nudgePath[0]; let dx = target.x - npc.position.x; let dz = target.z - npc.position.z; let dist = Math.hypot(dx, dz);
-                    if (dist < 1.0) {
+                    let target = npc.userData.nudgePath[0]; 
+                    let dx = target.x - npc.position.x; 
+                    let dz = target.z - npc.position.z; 
+                    let dist = Math.hypot(dx, dz);
+                    
+                    if (dist < 0.5) { // Troca de waypoint mais precisa para evitar cortar caminho
                         npc.userData.nudgePath.shift(); 
                         if(npc.userData.nudgePath.length === 0) {
                             disposeNPC(npc); npcs.splice(i, 1);
@@ -663,7 +661,11 @@
                             if(nudgesConcluidos >= 3) { setTimeout(() => { document.getElementById('modal-overlay').style.display='flex'; document.getElementById('final-screen').style.display='block'; isPaused=true;}, 1000); }
                             else { gerarNovoContrato(); } continue;
                         }
-                    } else { npc.position.x += (dx / dist) * npc.userData.speed; npc.position.z += (dz / dist) * npc.userData.speed; } 
+                    } else { 
+                        // UTILIZA A VELOCIDADE ORIGINAL E MANTÉM DINAMISMO (Mantém o baseSpeed)
+                        npc.position.x += (dx / dist) * npc.userData.baseSpeed; 
+                        npc.position.z += (dz / dist) * npc.userData.baseSpeed; 
+                    } 
                 } 
                 else if (!isPaused) {
                     let pPos = npc.userData.axis === 'X' ? npc.position.x : npc.position.z;
