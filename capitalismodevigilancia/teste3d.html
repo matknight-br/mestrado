@@ -98,12 +98,12 @@
             <span style="color: #f43f5e;"><span class="rec-dot"></span><span id="clock">00:00:00</span></span>
         </div>
         <div class="controls-hint">
-            [MOVER O RATO] Guiar Lente da Câmera | [SCROLL] Zoom Óptico | [CLIQUE] Selecionar Alvo
+            [MOVER O RATO] Guiar Lente da Câmara | [SCROLL] Zoom Óptico | [CLIQUE] Selecionar Alvo
         </div>
     </div>
 
     <div id="dashboard">
-        <h1>DATACORP OS v6.2</h1>
+        <h1>DATACORP OS v6.3</h1>
         <div class="status-box">
             <div class="dash-header-row">
                 <div class="data-title">Banco de Dados</div>
@@ -283,7 +283,7 @@
         addCrosswalk(-13, 0, 0);
         addCrosswalk(13, 0, 0);
 
-        // --- 4. CONTROLO PTZ CONTÍNUO (SEM CLIQUE) ---
+        // --- 4. CONTROLO PTZ CONTÍNUO (EIXO X CORRIGIDO) ---
         let panAngle = 0; 
         let tiltAngle = -0.3; 
         let targetPan = 0;
@@ -308,9 +308,8 @@
             let mx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
             let my = ((e.clientY - rect.top) / rect.height) * 2 - 1;
             
-            // Define o alvo da rotação com base na posição na tela
-            // Mover para as bordas gira a câmera até um limite de 60 graus
-            targetPan = -mx * (Math.PI / 3); 
+            // EIXO CORRIGIDO: mx positivo vira a câmara de forma positiva (direita)
+            targetPan = mx * (Math.PI / 3); 
             targetTilt = -0.3 - (my * 0.2); 
             
             // Atualiza vetor do raycaster (Eixo Y é invertido no Three.js)
@@ -332,7 +331,7 @@
             }
         });
 
-        // Evento de clique simplificado (já não arrasta, apenas seleciona)
+        // Evento de clique para selecionar alvo
         gameArea.addEventListener('pointerdown', (e) => {
             initAudio(); 
             raycaster.setFromCamera(mouse, camera);
