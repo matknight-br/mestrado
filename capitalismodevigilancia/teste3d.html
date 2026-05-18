@@ -8,11 +8,12 @@
         :root {
             --bg-color: #0f172a; --panel-bg: #1e293b; --text-main: #38bdf8;
             --text-alert: #f43f5e; --text-success: #10b981; --border-color: #334155;
+            --text-nudge: #a855f7; --text-warning: #f59e0b;
         }
 
         body { margin: 0; padding: 0; font-family: 'Courier New', Courier, monospace; background-color: var(--bg-color); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
 
-        #game-area { flex: 1; position: relative; border-right: 2px solid var(--border-color); overflow: hidden; }
+        #game-area { flex: 1; position: relative; border-right: 2px solid var(--border-color); overflow: hidden; cursor: crosshair; }
 
         /* Interface da Lente PTZ Realista */
         .scanline { position: absolute; width: 100%; height: 100%; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.2) 50%); background-size: 100% 4px; pointer-events: none; z-index: 50; }
@@ -72,7 +73,7 @@
             <div class="modal-title" style="color: var(--text-nudge);">ATUALIZAÇÃO: FASE 3</div>
             <p>Prever é bom, mas <strong>Garantir o resultado</strong> vale muito mais.</p>
             <p style="color: var(--text-nudge);"><strong>Novo Objetivo: Poder Instrumentário (O Nudge).</strong></p>
-            <p>Use os dados para manipular a realidade. Dispare notificações e alertas falsos nos celulares dos pedestres para alterar à força a rota física deles até às nossas lojas.</p>
+            <p>Use os dados para manipular a realidade. Dispare notificações e alertas falsos nos telemóveis dos pedestres para alterar à força a rota física deles até às nossas lojas.</p>
             <button class="modal-btn" onclick="iniciarFase3()" style="background: var(--text-nudge); color: white;">ATIVAR MANIPULAÇÃO</button>
         </div>
         <div class="modal-content" id="final-screen">
@@ -97,12 +98,12 @@
             <span style="color: #f43f5e;"><span class="rec-dot"></span><span id="clock">00:00:00</span></span>
         </div>
         <div class="controls-hint">
-            [CLIQUE E ARRASTE] Mover Câmera | [SCROLL] Zoom Óptico | [CLIQUE NO ALVO] Inspecionar
+            [MOVER O RATO] Guiar Lente da Câmera | [SCROLL] Zoom Óptico | [CLIQUE] Selecionar Alvo
         </div>
     </div>
 
     <div id="dashboard">
-        <h1>DATACORP OS v5.0 (Real 3D)</h1>
+        <h1>DATACORP OS v6.2</h1>
         <div class="status-box">
             <div class="dash-header-row">
                 <div class="data-title">Banco de Dados</div>
@@ -128,6 +129,74 @@
     </div>
 
     <script>
+        // --- 0. GERADOR DE EFEITOS SONOROS (WEB AUDIO API) ---
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        document.body.addEventListener('pointerdown', initAudio, { once: true });
+
+        function playZoomSound() {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(100, audioCtx.currentTime);
+            osc.frequency.linearRampToValueAtTime(150, audioCtx.currentTime + 0.1);
+            gain.gain.setValueAtTime(0.02, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.1);
+        }
+
+        function playCollectSound() {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.1);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.3);
+        }
+
+        function playNudgeSound() {
+            if (!audioCtx) return;
+            const osc1 = audioCtx.createOscillator();
+            const gain1 = audioCtx.createGain();
+            osc1.type = 'triangle';
+            osc1.frequency.setValueAtTime(150, audioCtx.currentTime);
+            osc1.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.2);
+            gain1.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gain1.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+            osc1.connect(gain1);
+            gain1.connect(audioCtx.destination);
+            osc1.start();
+            osc1.stop(audioCtx.currentTime + 0.2);
+
+            const osc2 = audioCtx.createOscillator();
+            const gain2 = audioCtx.createGain();
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(1200, audioCtx.currentTime + 0.1);
+            gain2.gain.setValueAtTime(0, audioCtx.currentTime);
+            gain2.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + 0.15);
+            gain2.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);
+            osc2.connect(gain2);
+            gain2.connect(audioCtx.destination);
+            osc2.start(audioCtx.currentTime + 0.1);
+            osc2.stop(audioCtx.currentTime + 0.6);
+        }
+
         // --- 1. DADOS DE JOGO ---
         const clockEl = document.getElementById('clock');
         setInterval(() => { clockEl.innerText = new Date().toLocaleTimeString(); }, 1000);
@@ -137,16 +206,18 @@
 
         let faseAtual = 1; let scoreDados = 0; let lucro = 0; let nudgesConcluidos = 0;
         const META_FASE_1 = 150; const META_FASE_2 = 1500;
-        let alvoAtual = null; let contratoAtivo = null;
+        
+        let alvoAtual = null; 
+        let contratoAtivo = null;
+        let isPaused = false; 
 
         // --- 2. CONFIGURAÇÃO THREE.JS ---
         const gameArea = document.getElementById('game-area');
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x8892b0); // Céu nublado/cinza
-        scene.fog = new THREE.FogExp2(0x8892b0, 0.005); // Nevoeiro realista
+        scene.background = new THREE.Color(0x8892b0); 
+        scene.fog = new THREE.FogExp2(0x8892b0, 0.005); 
 
         const camera = new THREE.PerspectiveCamera(45, gameArea.clientWidth / gameArea.clientHeight, 0.1, 1000);
-        // A CÂMARA FIXA NO POSTE
         camera.position.set(0, 35, 70); 
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -155,7 +226,6 @@
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         gameArea.appendChild(renderer.domElement);
 
-        // Iluminação Realista (Sol/Céu)
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
         scene.add(ambientLight);
         
@@ -166,17 +236,14 @@
         sunLight.shadow.mapSize.height = 2048;
         scene.add(sunLight);
 
-        // --- 3. AMBIENTE URBANO (Realista/Opaco) ---
-        // Asfalto
+        // --- 3. AMBIENTE URBANO ---
         const roadMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.9 });
         const ground = new THREE.Mesh(new THREE.PlaneGeometry(300, 300), roadMat);
         ground.rotation.x = -Math.PI / 2;
         ground.receiveShadow = true;
         scene.add(ground);
 
-        // Função para criar passeios e prédios
         function buildBlock(x, z, bWidth, bDepth) {
-            // Passeio
             const sidewalk = new THREE.Mesh(
                 new THREE.BoxGeometry(bWidth + 4, 1, bDepth + 4), 
                 new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 1.0 })
@@ -185,7 +252,6 @@
             sidewalk.receiveShadow = true;
             scene.add(sidewalk);
 
-            // Prédio Opaco
             const height = Math.random() * 20 + 20;
             const building = new THREE.Mesh(
                 new THREE.BoxGeometry(bWidth, height, bDepth),
@@ -197,13 +263,11 @@
             scene.add(building);
         }
 
-        // Quarteirões comerciais
-        buildBlock(-35, -35, 40, 40); // Fast Food (TL)
-        buildBlock(35, -35, 40, 40);  // Loja (TR)
-        buildBlock(-35, 35, 40, 40);  // Farmácia (BL)
-        buildBlock(35, 35, 40, 40);   // Banco (BR)
+        buildBlock(-35, -35, 40, 40); 
+        buildBlock(35, -35, 40, 40);  
+        buildBlock(-35, 35, 40, 40);  
+        buildBlock(35, 35, 40, 40);   
 
-        // Faixas de pedestres
         function addCrosswalk(x, z, rot) {
             const cw = new THREE.Mesh(
                 new THREE.PlaneGeometry(12, 18),
@@ -219,16 +283,14 @@
         addCrosswalk(-13, 0, 0);
         addCrosswalk(13, 0, 0);
 
-        // --- 4. CONTROLO PTZ PERSONALIZADO ---
-        let isDragging = false;
-        let previousMousePosition = { x: 0, y: 0 };
-        let startDragPos = { x: 0, y: 0 };
-        
+        // --- 4. CONTROLO PTZ CONTÍNUO (SEM CLIQUE) ---
         let panAngle = 0; 
-        let tiltAngle = -0.3; // Olha ligeiramente para baixo
+        let tiltAngle = -0.3; 
+        let targetPan = 0;
+        let targetTilt = -0.3;
+        let zoomThrottle = 0;
 
         function updatePTZCamera() {
-            // A câmera fica presa no (0, 35, 70), rodamos o "LookAt" com Trigonometria
             let targetX = camera.position.x + Math.sin(panAngle) * Math.cos(tiltAngle);
             let targetY = camera.position.y + Math.sin(tiltAngle);
             let targetZ = camera.position.z - Math.cos(panAngle) * Math.cos(tiltAngle);
@@ -236,56 +298,68 @@
         }
         updatePTZCamera();
 
-        gameArea.addEventListener('pointerdown', (e) => {
-            isDragging = true;
-            startDragPos = { x: e.clientX, y: e.clientY };
-            previousMousePosition = { x: e.clientX, y: e.clientY };
-        });
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
 
         gameArea.addEventListener('pointermove', (e) => {
-            if(isDragging) {
-                let deltaX = e.clientX - previousMousePosition.x;
-                let deltaY = e.clientY - previousMousePosition.y;
-                
-                // Rotação Lenta (Simula a mecânica de motor de câmara)
-                panAngle -= deltaX * 0.002;
-                tiltAngle -= deltaY * 0.002;
-                
-                // Limites do Motor da Câmara (Batentes)
-                panAngle = Math.max(-Math.PI/3, Math.min(Math.PI/3, panAngle)); // Limite de virar o pescoço
-                tiltAngle = Math.max(-Math.PI/2.2, Math.min(-0.05, tiltAngle)); // Limite de olhar cima/baixo
-                
-                updatePTZCamera();
-                previousMousePosition = { x: e.clientX, y: e.clientY };
-            }
-            // Hover logic...
-            handleRaycastHover(e);
+            const rect = renderer.domElement.getBoundingClientRect();
+            
+            // Converte a posição do rato para uma escala de -1 a 1
+            let mx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+            let my = ((e.clientY - rect.top) / rect.height) * 2 - 1;
+            
+            // Define o alvo da rotação com base na posição na tela
+            // Mover para as bordas gira a câmera até um limite de 60 graus
+            targetPan = -mx * (Math.PI / 3); 
+            targetTilt = -0.3 - (my * 0.2); 
+            
+            // Atualiza vetor do raycaster (Eixo Y é invertido no Three.js)
+            mouse.x = mx;
+            mouse.y = -my;
+            
+            handleRaycastHover();
         });
 
         gameArea.addEventListener('wheel', (e) => {
-            // Zoom Óptico da Lente
             camera.fov += e.deltaY * 0.05;
             camera.fov = Math.max(15, Math.min(65, camera.fov)); 
             camera.updateProjectionMatrix();
+
+            let now = Date.now();
+            if (now - zoomThrottle > 50) {
+                playZoomSound();
+                zoomThrottle = now;
+            }
         });
 
-        // --- 5. SISTEMA DE NPCs e NUDGE 3D ---
+        // Evento de clique simplificado (já não arrasta, apenas seleciona)
+        gameArea.addEventListener('pointerdown', (e) => {
+            initAudio(); 
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(npcs, true);
+            if(intersects.length > 0) { 
+                focarAlvo(intersects[0].object.parent); 
+            } else { 
+                desativarAlvo(); 
+            }
+        });
+
+        // --- 5. SISTEMA DE NPCs ---
         const npcs = []; 
         const npcBodyMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.6 });
         
-        // Caminhos das calçadas
         const routes = [
-            { sx: -10, sz: 80, ex: -10, ez: -80 }, // Sobe Esquerda
-            { sx: 10, sz: -80, ex: 10, ez: 80 },   // Desce Direita
-            { sx: -80, sz: -10, ex: 80, ez: -10 }, // Esq para Dir Cima
-            { sx: 80, sz: 10, ex: -80, ez: 10 }    // Dir para Esq Baixo
+            { sx: -10, sz: 80, ex: -10, ez: -80 }, 
+            { sx: 10, sz: -80, ex: 10, ez: 80 },   
+            { sx: -80, sz: -10, ex: 80, ez: -10 }, 
+            { sx: 80, sz: 10, ex: -80, ez: 10 }    
         ];
 
         function createNPC() {
             const group = new THREE.Group();
             
             const body = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 1.0, 3.5, 12), npcBodyMat.clone());
-            body.position.y = 1.75 + 1; // 1 é a altura do passeio
+            body.position.y = 1.75 + 1; 
             body.castShadow = true;
             
             const head = new THREE.Mesh(new THREE.SphereGeometry(0.7, 16, 16), body.material);
@@ -299,7 +373,7 @@
                 profissao: profissoes[Math.floor(Math.random()*profissoes.length)],
                 excedente: segredos[Math.floor(Math.random()*segredos.length)],
                 extraido: false, isZumbi: false, isNudging: false, nudgePath: [],
-                speed: Math.random() * 0.1 + 0.05
+                speed: Math.random() * 0.04 + 0.02 
             };
 
             const route = routes[Math.floor(Math.random() * routes.length)];
@@ -307,7 +381,6 @@
             group.userData.dirX = Math.sign(route.ex - route.sx);
             group.userData.dirZ = Math.sign(route.ez - route.sz);
 
-            // Alvos Forçados (para facilitar os testes)
             if(contratoAtivo && Math.random() > 0.4) {
                 if(contratoAtivo.cliente === "Rede Fast Food") group.userData.excedente = 'Ar do ambiente (está de dieta)';
                 if(contratoAtivo.cliente === "AgiotaBank") group.userData.excedente = 'Procura empréstimo bancário';
@@ -318,17 +391,9 @@
         for(let i=0; i<10; i++) setTimeout(createNPC, i*1000);
         setInterval(() => { if(npcs.length < 18) createNPC(); }, 2000);
 
-        // --- 6. RAYCASTING E INTERAÇÃO ---
-        const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2();
-
-        function handleRaycastHover(e) {
-            if(isDragging) return;
-            const rect = renderer.domElement.getBoundingClientRect();
-            mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-            mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        // --- 6. RAYCASTING E LÓGICA DE DADOS ---
+        function handleRaycastHover() {
             raycaster.setFromCamera(mouse, camera);
-            
             const intersects = raycaster.intersectObjects(npcs, true);
             npcs.forEach(g => {
                 if(g !== alvoAtual && !g.userData.isZumbi) g.children.forEach(m => m.material.emissive.setHex(0x000000));
@@ -336,20 +401,8 @@
             if(intersects.length > 0) {
                 let g = intersects[0].object.parent;
                 if(g !== alvoAtual && !g.userData.isZumbi) g.children.forEach(m => m.material.emissive.setHex(0x333333));
-                document.body.style.cursor = 'crosshair';
-            } else { document.body.style.cursor = 'default'; }
-        }
-
-        gameArea.addEventListener('pointerup', (e) => {
-            isDragging = false;
-            let dist = Math.hypot(e.clientX - startDragPos.x, e.clientY - startDragPos.y);
-            if(dist < 5) { // É um clique, não um drag
-                raycaster.setFromCamera(mouse, camera);
-                const intersects = raycaster.intersectObjects(npcs, true);
-                if(intersects.length > 0) { focarAlvo(intersects[0].object.parent); } 
-                else { desativarAlvo(); }
             }
-        });
+        }
 
         const btnAcao = document.getElementById('btn-acao');
         
@@ -358,7 +411,9 @@
             if(alvoAtual && alvoAtual !== group) alvoAtual.children.forEach(m => m.material.emissive.setHex(0x000000));
             
             alvoAtual = group;
-            alvoAtual.children.forEach(m => m.material.emissive.setHex(0xf43f5e)); // Alvo vermelho
+            alvoAtual.children.forEach(m => m.material.emissive.setHex(0xf43f5e)); 
+
+            isPaused = true; 
 
             document.getElementById('dados-conscientes').innerHTML = `
                 <div class="log-entry"><span class="key">ID:</span> <span class="val">${group.userData.id}</span></div>
@@ -388,9 +443,10 @@
             document.getElementById('dados-excedentes').innerHTML = 'Nenhum alvo selecionado.';
             document.getElementById('dados-excedentes').className = 'hidden-data';
             btnAcao.disabled = true; btnAcao.innerText = "AGUARDANDO ALVO"; btnAcao.style.background = "#475569";
+            
+            isPaused = false; 
         }
 
-        // --- 7. CONTRATOS E LÓGICA DAS FASES ---
         const contratosFase2 = [
             { cliente: "Seguradora", desc: "Ache perfis de risco (Ansiedade/Medo).", validador: (n) => n.userData.excedente.includes('Ansiedade') || n.userData.excedente.includes('Medo'), valor: 800 }
         ];
@@ -415,52 +471,63 @@
 
         btnAcao.addEventListener('click', () => {
             if(!alvoAtual) return;
-            let alvo = alvoAtual; // Guarda referência
+            let alvo = alvoAtual; 
 
             if(faseAtual === 1) {
+                playCollectSound();
+                
                 document.getElementById('dados-excedentes').classList.replace('hidden-data', 'revealed-data');
                 let extraido = Math.floor(Math.random()*40)+10;
                 scoreDados += extraido;
                 document.getElementById('score-display').innerText = `${scoreDados} GB`;
                 btnAcao.innerText = "COLETADO"; btnAcao.disabled = true; alvo.userData.extraido = true;
-                if(scoreDados >= META_FASE_1) setTimeout(() => { document.getElementById('modal-overlay').style.display='flex'; document.getElementById('modal-fase2').style.display='block'; }, 800);
+                
+                setTimeout(() => { desativarAlvo(); }, 600);
+                if(scoreDados >= META_FASE_1) setTimeout(() => { document.getElementById('modal-overlay').style.display='flex'; document.getElementById('modal-fase2').style.display='block'; isPaused=true; }, 1000);
             }
             else if(faseAtual === 2) {
                 if(contratoAtivo.validador(alvo)) {
+                    playCollectSound();
+                    
                     notificarLucro(contratoAtivo.valor);
                     btnAcao.innerText = "VENDIDO!"; btnAcao.disabled = true;
-                    // Zumbificação (Extraído ao limite)
                     alvo.userData.isZumbi = true;
                     alvo.children.forEach(m => { m.material.color.setHex(0x475569); m.material.emissive.setHex(0x000000); });
                     alvo.userData.speed *= 0.3;
-                    desativarAlvo(); gerarNovoContrato();
-                    if(lucro >= META_FASE_2) setTimeout(() => { document.getElementById('modal-overlay').style.display='flex'; document.getElementById('modal-fase3').style.display='block'; }, 800);
+                    
+                    setTimeout(() => { desativarAlvo(); gerarNovoContrato(); }, 800);
+                    if(lucro >= META_FASE_2) setTimeout(() => { document.getElementById('modal-overlay').style.display='flex'; document.getElementById('modal-fase3').style.display='block'; isPaused=true; }, 1200);
                 } else { btnAcao.innerText = "ALVO INCORRETO"; btnAcao.disabled = true; }
             }
             else if(faseAtual === 3) {
                 if(contratoAtivo.validador(alvo)) {
+                    playNudgeSound();
+                    
                     btnAcao.innerText = "MANIPULAÇÃO ATIVA!"; btnAcao.disabled = true;
                     alvo.userData.isNudging = true;
-                    alvo.children.forEach(m => m.material.emissive.setHex(0xa855f7)); // Cor do Nudge
+                    alvo.children.forEach(m => m.material.emissive.setHex(0xa855f7)); 
                     
-                    // ALGORITMO FÍSICO DO NUDGE (Ele caminha até à loja)
                     alvo.userData.nudgePath = [
-                        { x: contratoAtivo.corner.x, z: contratoAtivo.corner.z }, // Vai pra esquina
-                        { x: contratoAtivo.dest.x, z: contratoAtivo.dest.z }      // Entra na porta
+                        { x: contratoAtivo.corner.x, z: contratoAtivo.corner.z }, 
+                        { x: contratoAtivo.dest.x, z: contratoAtivo.dest.z }      
                     ];
-                    desativarAlvo();
+                    setTimeout(() => { desativarAlvo(); }, 600);
                 } else { btnAcao.innerText = "GATILHO INÚTIL"; btnAcao.disabled = true; }
             }
         });
 
-        // --- 8. LOOP DE ANIMAÇÃO NATIVA ---
+        // --- 8. LOOP DE ANIMAÇÃO (INTERPOLAÇÃO DE CÂMARA) ---
         function animate() {
             requestAnimationFrame(animate);
+
+            // Suaviza a rotação da câmara usando interpolação (Lerp)
+            panAngle += (targetPan - panAngle) * 0.05;
+            tiltAngle += (targetTilt - tiltAngle) * 0.05;
+            updatePTZCamera();
 
             for (let i = npcs.length - 1; i >= 0; i--) {
                 let npc = npcs[i];
                 
-                // Rotina de Nudge (Fase 3)
                 if (npc.userData.isNudging && npc.userData.nudgePath.length > 0) {
                     let target = npc.userData.nudgePath[0];
                     let dx = target.x - npc.position.x;
@@ -468,28 +535,24 @@
                     let dist = Math.hypot(dx, dz);
                     
                     if (dist < 1.0) {
-                        npc.userData.nudgePath.shift(); // Chegou no waypoint
+                        npc.userData.nudgePath.shift(); 
                         if(npc.userData.nudgePath.length === 0) {
-                            // Entrou na loja!
                             scene.remove(npc); npcs.splice(i, 1);
                             notificarLucro(contratoAtivo.valor); nudgesConcluidos++;
-                            if(nudgesConcluidos >= 2) { setTimeout(() => { document.getElementById('modal-overlay').style.display='flex'; document.getElementById('final-screen').style.display='block';}, 1000); }
+                            if(nudgesConcluidos >= 2) { setTimeout(() => { document.getElementById('modal-overlay').style.display='flex'; document.getElementById('final-screen').style.display='block'; isPaused=true;}, 1000); }
                             else { gerarNovoContrato(); }
                             continue;
                         }
                     } else {
-                        // Caminha forçadamente para o destino
                         npc.position.x += (dx / dist) * 0.3;
                         npc.position.z += (dz / dist) * 0.3;
                     }
                 } 
-                // Comportamento normal de quem não é alvo focado
-                else if (npc !== alvoAtual) {
+                else if (!isPaused) {
                     npc.position.x += npc.userData.dirX * npc.userData.speed;
                     npc.position.z += npc.userData.dirZ * npc.userData.speed;
                 }
 
-                // Limpeza se for muito longe
                 if (Math.abs(npc.position.x) > 100 || Math.abs(npc.position.z) > 100) {
                     scene.remove(npc); npcs.splice(i, 1);
                 }
@@ -499,8 +562,8 @@
 
         window.addEventListener('resize', () => { camera.aspect = gameArea.clientWidth / gameArea.clientHeight; camera.updateProjectionMatrix(); renderer.setSize(gameArea.clientWidth, gameArea.clientHeight); });
         
-        function iniciarFase2() { faseAtual = 2; document.getElementById('modal-overlay').style.display='none'; document.getElementById('modal-fase2').style.display='none'; document.getElementById('fase-display').innerText="FASE 2: PREVISÃO"; document.getElementById('fase-display').style.color="var(--text-warning)"; document.getElementById('contrato-box').style.display='block'; document.getElementById('score-display').style.display='none'; document.getElementById('lucro-display').style.display='block'; desativarAlvo(); gerarNovoContrato(); }
-        function iniciarFase3() { faseAtual = 3; document.getElementById('modal-overlay').style.display='none'; document.getElementById('modal-fase3').style.display='none'; document.getElementById('fase-display').innerText="FASE 3: NUDGE"; document.getElementById('fase-display').style.color="var(--text-nudge)"; document.getElementById('titulo-contrato').innerText="Contrato de Modificação"; document.getElementById('contrato-box').style.borderColor="var(--text-nudge)"; desativarAlvo(); gerarNovoContrato(); }
+        function iniciarFase2() { faseAtual = 2; isPaused = false; document.getElementById('modal-overlay').style.display='none'; document.getElementById('modal-fase2').style.display='none'; document.getElementById('fase-display').innerText="FASE 2: PREVISÃO"; document.getElementById('fase-display').style.color="var(--text-warning)"; document.getElementById('contrato-box').style.display='block'; document.getElementById('score-display').style.display='none'; document.getElementById('lucro-display').style.display='block'; desativarAlvo(); gerarNovoContrato(); }
+        function iniciarFase3() { faseAtual = 3; isPaused = false; document.getElementById('modal-overlay').style.display='none'; document.getElementById('modal-fase3').style.display='none'; document.getElementById('fase-display').innerText="FASE 3: NUDGE"; document.getElementById('fase-display').style.color="var(--text-nudge)"; document.getElementById('titulo-contrato').innerText="Contrato de Modificação"; document.getElementById('contrato-box').style.borderColor="var(--text-nudge)"; desativarAlvo(); gerarNovoContrato(); }
         
         animate();
     </script>
