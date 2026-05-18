@@ -235,7 +235,7 @@
         sunLight.shadow.mapSize.height = 1024;
         scene.add(sunLight);
 
-        // --- 3. AMBIENTE URBANO ---
+        // --- 3. AMBIENTE URBANO (SEM SOBREPOSIÇÕES NA ESQUINA) ---
         const roadMat = new THREE.MeshLambertMaterial({ color: 0x222222 });
         const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), roadMat);
         ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
@@ -245,17 +245,30 @@
             new THREE.MeshLambertMaterial({ color: 0x334155 })
         ];
 
+        // Constrói os prédios genéricos, evitando a esquina do quarteirão que fica de frente para a rua
         function buildComplexBlock(centerX, centerZ, w, d) {
             const sidewalk = new THREE.Mesh(new THREE.BoxGeometry(w + 12, 1, d + 12), new THREE.MeshLambertMaterial({ color: 0x555555 }));
             sidewalk.position.set(centerX, 0.5, centerZ); sidewalk.receiveShadow = true; scene.add(sidewalk);
             
-            for(let i=0; i<2; i++) {
-                let bw = (w / 2) - 2; let bd = (d / 2) - 2; let bh = Math.random() * 20 + 15;
+            // Divide o quarteirão em 4 posições possíveis (quadrantes)
+            const offsets = [
+                {x: -15, z: -15}, {x: 15, z: -15},
+                {x: -15, z: 15},  {x: 15, z: 15}
+            ];
+
+            offsets.forEach(off => {
+                let isInnerX = (Math.sign(centerX) !== Math.sign(off.x));
+                let isInnerZ = (Math.sign(centerZ) !== Math.sign(off.z));
+                
+                // Se for a esquina interior (que aponta para a origem 0,0), não construímos prédio genérico!
+                if (isInnerX && isInnerZ) return; 
+
+                let bw = 20; let bd = 20; let bh = Math.random() * 20 + 15;
                 let mat = bMats[Math.floor(Math.random() * bMats.length)];
                 let b = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), mat);
-                let ox = (Math.random() > 0.5 ? 1 : -1) * (bw/2 + 10); let oz = (Math.random() > 0.5 ? 1 : -1) * (bd/2 + 10);
-                b.position.set(centerX + ox, bh/2 + 1, centerZ + oz); b.castShadow = true; b.receiveShadow = true; scene.add(b);
-            }
+                b.position.set(centerX + off.x, bh/2 + 1, centerZ + off.z);
+                b.castShadow = true; b.receiveShadow = true; scene.add(b);
+            });
         }
         
         buildComplexBlock(-50, -50, 50, 50); buildComplexBlock(50, -50, 50, 50);  
@@ -275,6 +288,7 @@
             return b;
         }
 
+        // Constrói os edifícios corporativos exatamente nas esquinas deixadas vazias
         createLandmarkBuilding(-35, -35, 0xef4444); // Fast Food
         createLandmarkBuilding(35, -35, 0xec4899);  // Loja
         createLandmarkBuilding(-35, 35, 0x10b981);  // Farmácia
@@ -350,7 +364,7 @@
         }
         setInterval(() => { if(cars.length < 8 && !isPaused) spawnCar(); }, 3500);
 
-        // --- 6. REDE DE CÂMERAS PTZ ---
+        // --- 6. REDE DE CÂMERAS PTZ (Somente 2 eixos principais) ---
         const cameraNetwork = [
             { name: "REDE DATACORP - CÂMARA 01 (SUL)", pos: {x: 0, y: 15, z: 65}, basePan: 0, baseTilt: -0.15 },
             { name: "REDE DATACORP - CÂMARA 02 (NORTE)", pos: {x: 0, y: 15, z: -65}, basePan: Math.PI, baseTilt: -0.15 }
@@ -450,7 +464,7 @@
                 bodyMesh: body, headMesh: head,
                 axis: route.axis, dirX: Math.sign(route.ex - route.sx), dirZ: Math.sign(route.ez - route.sz)
             };
-            group.position.set(route.sx, 0, route.sz);
+            group.userData.speed = group.userData.baseSpeed; group.position.set(route.sx, 0, route.sz);
 
             if(contratoAtivo && Math.random() > 0.4) {
                 if(contratoAtivo.cliente === "Rede Fast Food") group.userData.excedente["Almoço Ontem"] = 'Ar do ambiente (está de dieta)';
@@ -579,7 +593,6 @@
                     alvo.userData.bodyMesh.material.emissive.setHex(0xa855f7); 
                     alvo.userData.headMesh.material.emissive.setHex(0xa855f7); 
 
-                    // ALGORITMO ORTOGONAL DO NUDGE (SEGUE A CALÇADA E ATRAVESSA A RUA)
                     let path = [];
                     if (alvo.userData.axis === 'Z') {
                         path.push({ x: alvo.position.x, z: contratoAtivo.corner.z });
@@ -648,12 +661,8 @@
                 if(npc.children[2]) npc.children[2].lookAt(camera.position);
 
                 if (npc.userData.isNudging && npc.userData.nudgePath.length > 0) {
-                    let target = npc.userData.nudgePath[0]; 
-                    let dx = target.x - npc.position.x; 
-                    let dz = target.z - npc.position.z; 
-                    let dist = Math.hypot(dx, dz);
-                    
-                    if (dist < 0.5) { // Troca de waypoint mais precisa para evitar cortar caminho
+                    let target = npc.userData.nudgePath[0]; let dx = target.x - npc.position.x; let dz = target.z - npc.position.z; let dist = Math.hypot(dx, dz);
+                    if (dist < 1.0) {
                         npc.userData.nudgePath.shift(); 
                         if(npc.userData.nudgePath.length === 0) {
                             disposeNPC(npc); npcs.splice(i, 1);
@@ -661,11 +670,7 @@
                             if(nudgesConcluidos >= 3) { setTimeout(() => { document.getElementById('modal-overlay').style.display='flex'; document.getElementById('final-screen').style.display='block'; isPaused=true;}, 1000); }
                             else { gerarNovoContrato(); } continue;
                         }
-                    } else { 
-                        // UTILIZA A VELOCIDADE ORIGINAL E MANTÉM DINAMISMO (Mantém o baseSpeed)
-                        npc.position.x += (dx / dist) * npc.userData.baseSpeed; 
-                        npc.position.z += (dz / dist) * npc.userData.baseSpeed; 
-                    } 
+                    } else { npc.position.x += (dx / dist) * npc.userData.baseSpeed; npc.position.z += (dz / dist) * npc.userData.baseSpeed; } 
                 } 
                 else if (!isPaused) {
                     let pPos = npc.userData.axis === 'X' ? npc.position.x : npc.position.z;
