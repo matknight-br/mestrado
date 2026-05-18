@@ -118,7 +118,7 @@
     </div>
 
     <div id="dashboard">
-        <h1>DATACORP OS v10 (Tráfego Dinâmico)</h1>
+        <h1>DATACORP OS v10 (Nudge Físico)</h1>
         <div class="status-box">
             <div class="dash-header-row">
                 <div class="data-title">Banco de Dados</div>
@@ -199,7 +199,6 @@
         const META_FASE_1 = 150; const META_FASE_2 = 1500;
         let alvoAtual = null; let contratoAtivo = null; let isPaused = false; 
 
-        // O trânsito alterna os semáforos
         let isGreenX = true; 
         setInterval(() => {
             isGreenX = !isGreenX;
@@ -229,7 +228,7 @@
         sunLight.shadow.mapSize.height = 1024;
         scene.add(sunLight);
 
-        // --- 3. AMBIENTE URBANO (Calçadas e Zebras) ---
+        // --- 3. AMBIENTE URBANO (Calçadas e Edifícios Alvo) ---
         const roadMat = new THREE.MeshLambertMaterial({ color: 0x222222 });
         const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), roadMat);
         ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
@@ -239,6 +238,7 @@
             new THREE.MeshLambertMaterial({ color: 0x334155 })
         ];
 
+        // Função para os quarteirões de fundo (genéricos)
         function buildComplexBlock(centerX, centerZ, w, d) {
             const sidewalk = new THREE.Mesh(new THREE.BoxGeometry(w + 12, 1, d + 12), new THREE.MeshLambertMaterial({ color: 0x555555 }));
             sidewalk.position.set(centerX, 0.5, centerZ); sidewalk.receiveShadow = true; scene.add(sidewalk);
@@ -246,13 +246,42 @@
             for(let i=0; i<2; i++) {
                 let bw = (w / 2) - 2; let bd = (d / 2) - 2; let bh = Math.random() * 20 + 15;
                 let b = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), bMats[i%2]);
-                let ox = (Math.random() > 0.5 ? 1 : -1) * (bw/2 + 2); let oz = (Math.random() > 0.5 ? 1 : -1) * (bd/2 + 2);
+                // Desvio para evitar o canto interior onde colocaremos a loja alvo
+                let ox = (Math.random() > 0.5 ? 1 : -1) * (bw/2 + 10); let oz = (Math.random() > 0.5 ? 1 : -1) * (bd/2 + 10);
                 b.position.set(centerX + ox, bh/2 + 1, centerZ + oz); b.castShadow = true; b.receiveShadow = true; scene.add(b);
             }
         }
         
         buildComplexBlock(-50, -50, 50, 50); buildComplexBlock(50, -50, 50, 50);  
         buildComplexBlock(-50, 50, 50, 50);  buildComplexBlock(50, 50, 50, 50);   
+
+        // EDIFÍCIOS ESPECÍFICOS PARA O NUDGE (Fase 3)
+        function createLandmarkBuilding(cx, cz, hexColor, emojiIcon) {
+            // Edifício Principal (colorido para destaque corporativo)
+            const geo = new THREE.BoxGeometry(16, 22, 16);
+            const mat = new THREE.MeshLambertMaterial({ color: hexColor });
+            const b = new THREE.Mesh(geo, mat);
+            b.position.set(cx, 11 + 1, cz);
+            b.castShadow = true; b.receiveShadow = true; scene.add(b);
+
+            // Toldo da Porta (Para ficar evidente onde os NPCs vão entrar)
+            const doorGeo = new THREE.BoxGeometry(6, 4, 17);
+            const doorMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const door = new THREE.Mesh(doorGeo, doorMat);
+            door.position.set(cx, 2.5, cz);
+            scene.add(door);
+
+            return b;
+        }
+
+        // Top-Left: Fast Food (Vermelho)
+        createLandmarkBuilding(-35, -35, 0xef4444, '🍔');
+        // Top-Right: Loja de Roupas (Rosa)
+        createLandmarkBuilding(35, -35, 0xec4899, '👗');
+        // Bottom-Left: Farmácia (Verde)
+        createLandmarkBuilding(-35, 35, 0x10b981, '💊');
+        // Bottom-Right: Banco (Azul)
+        createLandmarkBuilding(35, 35, 0x3b82f6, '🏦');
 
         function addZebraCrosswalk(cx, cz, rot) {
             const group = new THREE.Group();
@@ -276,22 +305,30 @@
         addZebraCrosswalk(-21, 0, Math.PI/2); 
         addZebraCrosswalk(21, 0, Math.PI/2);
 
-        // --- 4. PRÉ-CACHE DE EMOJIS ---
+        // --- 4. PRÉ-CACHE DE EMOJIS (Incluindo os edifícios) ---
         const emojiCache = {};
         function preloadEmojis() {
-            arquetipos.forEach(arq => {
+            // Unimos os arquétipos e os ícones das lojas
+            const allEmojis = [...new Set(arquetipos.map(a => a.tipo).concat(['🍔', '👗', '💊', '🏦']))];
+            allEmojis.forEach(emj => {
                 const canvas = document.createElement('canvas');
                 canvas.width = 128; canvas.height = 128;
                 const ctx = canvas.getContext('2d');
                 ctx.font = '90px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
                 ctx.shadowColor = "rgba(56, 189, 248, 0.5)"; ctx.shadowBlur = 10;
-                ctx.fillText(arq.tipo, 64, 70); 
+                ctx.fillText(emj, 64, 70); 
                 const tex = new THREE.CanvasTexture(canvas);
-                emojiCache[arq.tipo] = new THREE.SpriteMaterial({ map: tex, transparent: true });
+                emojiCache[emj] = new THREE.SpriteMaterial({ map: tex, transparent: true });
             });
         }
         preloadEmojis();
         function getEmojiSprite(emoji) { return new THREE.Sprite(emojiCache[emoji]); }
+
+        // Colocar os Emojis gigantes no topo das Lojas
+        const fFoodSprite = getEmojiSprite('🍔'); fFoodSprite.position.set(-35, 27, -35); fFoodSprite.scale.set(12, 12, 1); scene.add(fFoodSprite);
+        const lojaSprite = getEmojiSprite('👗'); lojaSprite.position.set(35, 27, -35); lojaSprite.scale.set(12, 12, 1); scene.add(lojaSprite);
+        const farmaciaSprite = getEmojiSprite('💊'); farmaciaSprite.position.set(-35, 27, 35); farmaciaSprite.scale.set(12, 12, 1); scene.add(farmaciaSprite);
+        const bancoSprite = getEmojiSprite('🏦'); bancoSprite.position.set(35, 27, 35); bancoSprite.scale.set(12, 12, 1); scene.add(bancoSprite);
 
         // --- 5. SISTEMA DE CARROS COM CONVERSÃO À DIREITA ---
         const cars = [];
@@ -305,7 +342,7 @@
             let taillights = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.5, 0.2), new THREE.MeshBasicMaterial({color: 0xff0000})); taillights.position.set(0, -0.2, -3); car.add(taillights);
             
             let lane = Math.floor(Math.random() * 4);
-            let willTurnRight = Math.random() < 0.35; // 35% de hipóteses de virar à direita no cruzamento
+            let willTurnRight = Math.random() < 0.35; 
 
             car.userData = {
                 brakeLights: taillights.material,
@@ -313,7 +350,7 @@
                 dir: (lane === 1 || lane === 3) ? -1 : 1,
                 baseSpeed: 0.6,
                 willTurnRight: willTurnRight,
-                turnState: 0 // 0 = em frente, 1 = fez a curva
+                turnState: 0 
             };
 
             if(lane === 0) { car.position.set(-100, 1, 6); car.rotation.y = Math.PI/2; }
@@ -396,10 +433,10 @@
         const sharedHeadGeo = new THREE.SphereGeometry(0.6, 8, 8); 
         
         const pRoutes = [
-            { sx: -19, sz: 80, ex: -19, ez: -80, axis: 'Z' }, // Anda no eixo Z (Sobe a Esquerda)
-            { sx: 19, sz: -80, ex: 19, ez: 80, axis: 'Z' },   // Anda no eixo Z (Desce a Direita)
-            { sx: -80, sz: -19, ex: 80, ez: -19, axis: 'X' }, // Anda no eixo X (Esq p Dir por Cima)
-            { sx: 80, sz: 19, ex: -80, ez: 19, axis: 'X' }    // Anda no eixo X (Dir p Esq por Baixo)
+            { sx: -19, sz: 80, ex: -19, ez: -80, axis: 'Z' }, 
+            { sx: 19, sz: -80, ex: 19, ez: 80, axis: 'Z' },   
+            { sx: -80, sz: -19, ex: 80, ez: -19, axis: 'X' }, 
+            { sx: 80, sz: 19, ex: -80, ez: 19, axis: 'X' }    
         ];
 
         function createNPC() {
@@ -435,7 +472,9 @@
 
             if(contratoAtivo && Math.random() > 0.4) {
                 if(contratoAtivo.cliente === "Rede Fast Food") group.userData.excedente = 'Pesquisou dietas restritivas';
-                if(contratoAtivo.cliente === "AgiotaBank") group.userData.excedente = 'Procura empréstimo bancário';
+                else if(contratoAtivo.cliente === "AgiotaBank") group.userData.excedente = 'Procura empréstimo bancário';
+                else if(contratoAtivo.cliente === "Farmácia Vida+") group.userData.excedente = 'Ansiedade severa';
+                else if(contratoAtivo.cliente === "Loja de Roupas") group.userData.excedente = 'Medo de demissão';
             }
             scene.add(group); npcs.push(group); npcBodies.push(body);
         }
@@ -449,7 +488,7 @@
             npcGroup.userData.bodyMesh.material.dispose();
         }
 
-        // --- 8. LÓGICA DE JOGO ---
+        // --- 8. LÓGICA DE JOGO E CONTRATOS (Atualizados para Lojas) ---
         function handleRaycastHover() {
             raycaster.setFromCamera(mouseVector, camera);
             const intersects = raycaster.intersectObjects(npcBodies);
@@ -506,10 +545,14 @@
             btnAcao.disabled = true; btnAcao.innerText = "AGUARDANDO ALVO"; btnAcao.style.background = "#475569";
         }
 
+        // CONTRATOS DE FASE 3 AGORA APONTAM PARA OS EDIFÍCIOS REAIS
         const contratosFase2 = [{ cliente: "Seguradora", desc: "Ache perfis de risco (Ansiedade/Medo).", validador: (n) => n.userData.excedente.includes('Ansiedade') || n.userData.excedente.includes('Medo'), valor: 800 }];
         const contratosFase3 = [
-            { cliente: "Rede Fast Food", desc: "Ache vulnerável fazendo dieta.", validador: (n) => n.userData.excedente.includes('dieta'), nudgeMsg: "DISPARAR CUPOM RELÂMPAGO", dest: {x: -25, z: -25}, corner: {x: -19, z: -19}, valor: 3000 },
-            { cliente: "AgiotaBank", desc: "Ache quem busca empréstimo.", validador: (n) => n.userData.excedente.includes('empréstimo'), nudgeMsg: "ENVIAR ALERTA DE CRÉDITO", dest: {x: 25, z: 25}, corner: {x: 19, z: 19}, valor: 5000 }
+            // dest: É a porta do edifício. corner: é o ponto na calçada antes de virar para o prédio
+            { cliente: "Rede Fast Food", desc: "Ache vulnerável fazendo dieta.", validador: (n) => n.userData.excedente.includes('dieta'), nudgeMsg: "DISPARAR CUPOM RELÂMPAGO", dest: {x: -35, z: -35}, corner: {x: -19, z: -19}, valor: 3000 },
+            { cliente: "Loja de Roupas", desc: "Ache alguém com medo de demissão.", validador: (n) => n.userData.excedente.includes('demissão'), nudgeMsg: "ENVIAR ALERTA DE LIQUIDAÇÃO", dest: {x: 35, z: -35}, corner: {x: 19, z: -19}, valor: 4000 },
+            { cliente: "Farmácia Vida+", desc: "Ache alguém com ansiedade severa.", validador: (n) => n.userData.excedente.includes('Ansiedade'), nudgeMsg: "OFERTAR CALMANTE", dest: {x: -35, z: 35}, corner: {x: -19, z: 19}, valor: 3500 },
+            { cliente: "AgiotaBank", desc: "Ache quem busca empréstimo.", validador: (n) => n.userData.excedente.includes('empréstimo'), nudgeMsg: "ENVIAR ALERTA DE CRÉDITO", dest: {x: 35, z: 35}, corner: {x: 19, z: 19}, valor: 5000 }
         ];
 
         function gerarNovoContrato() {
@@ -548,15 +591,24 @@
                 if(contratoAtivo.validador(alvo)) {
                     playSound('nudge'); btnAcao.innerText = "MANIPULAÇÃO ATIVA!"; btnAcao.disabled = true;
                     alvo.userData.isNudging = true; 
+                    
+                    // FÍSICA DO NUDGE: Fica Roxo e Caminha MUITO LENTO (em transe)
+                    alvo.userData.speed = 0.02;
                     alvo.userData.bodyMesh.material.emissive.setHex(0xa855f7); 
                     alvo.userData.headMesh.material.emissive.setHex(0xa855f7); 
-                    alvo.userData.nudgePath = [{ x: contratoAtivo.corner.x, z: contratoAtivo.corner.z }, { x: contratoAtivo.dest.x, z: contratoAtivo.dest.z }];
+                    alvo.children[2].material.opacity = 0.5; // Emoji esmaeçe
+
+                    // ROTA FÍSICA A LIGAR A PORTA DO EDIFÍCIO
+                    alvo.userData.nudgePath = [
+                        { x: contratoAtivo.corner.x, z: contratoAtivo.corner.z }, // Vai pra esquina do passeio
+                        { x: contratoAtivo.dest.x, z: contratoAtivo.dest.z }      // Dirige-se para dentro da loja alvo
+                    ];
                     setTimeout(() => { desativarAlvo(); }, 600);
                 } else { btnAcao.innerText = "GATILHO INÚTIL"; btnAcao.disabled = true; setTimeout(() => { desativarAlvo(); }, 600); }
             }
         });
 
-        // --- 9. LOOP DE ANIMAÇÃO COM SEMÁFOROS E CONVERSÕES ---
+        // --- 9. LOOP DE ANIMAÇÃO COM NUDGES DIRECIONADOS ---
         window.zoomThrottle = 0;
         function animate() {
             requestAnimationFrame(animate);
@@ -566,14 +618,10 @@
             for (let i = cars.length - 1; i >= 0; i--) {
                 let c = cars[i];
                 if(!isPaused) {
-                    
-                    // Lógica de Semáforo para Carros
                     let isMyLightGreen = (c.userData.axis === 'X') ? isGreenX : !isGreenX;
                     let pos = c.userData.axis === 'X' ? c.position.x : c.position.z;
-                    // Linha de paragem dos carros ajustada para antes das faixas (23)
                     let distToIntersection = c.userData.dir > 0 ? (-23 - pos) : (pos - 23);
                     
-                    // Lógica de Conversão à Direita
                     if (c.userData.willTurnRight && c.userData.turnState === 0) {
                         let pivot = c.userData.dir > 0 ? -6 : 6;
                         let pastPivot = c.userData.dir > 0 ? (pos >= pivot) : (pos <= pivot);
@@ -588,7 +636,7 @@
                                 else { c.userData.dir = -1; c.position.z = -6; c.rotation.y = -Math.PI/2; }
                             }
                             c.userData.turnState = 1; 
-                            pos = c.userData.axis === 'X' ? c.position.x : c.position.z; // Atualiza variável pos
+                            pos = c.userData.axis === 'X' ? c.position.x : c.position.z; 
                         }
                     }
 
@@ -613,31 +661,41 @@
                 let npc = npcs[i];
                 if(npc.children[2]) npc.children[2].lookAt(camera.position);
 
+                // SE ESTIVER SOB O EFEITO DO NUDGE (Desvio de Rota em Transe)
                 if (npc.userData.isNudging && npc.userData.nudgePath.length > 0) {
-                    let target = npc.userData.nudgePath[0]; let dx = target.x - npc.position.x; let dz = target.z - npc.position.z; let dist = Math.hypot(dx, dz);
+                    let target = npc.userData.nudgePath[0]; 
+                    let dx = target.x - npc.position.x; 
+                    let dz = target.z - npc.position.z; 
+                    let dist = Math.hypot(dx, dz);
+                    
                     if (dist < 1.0) {
                         npc.userData.nudgePath.shift(); 
                         if(npc.userData.nudgePath.length === 0) {
+                            // NPC Entrou na Loja e consumiu!
                             disposeNPC(npc); npcs.splice(i, 1);
                             notificarLucro(contratoAtivo.valor); nudgesConcluidos++;
-                            if(nudgesConcluidos >= 2) { setTimeout(() => { document.getElementById('modal-overlay').style.display='flex'; document.getElementById('final-screen').style.display='block'; isPaused=true;}, 1000); }
+                            
+                            // 3 Nudges para terminar o jogo e permitir mais exploração
+                            if(nudgesConcluidos >= 3) { setTimeout(() => { document.getElementById('modal-overlay').style.display='flex'; document.getElementById('final-screen').style.display='block'; isPaused=true;}, 1000); }
                             else { gerarNovoContrato(); } continue;
                         }
-                    } else { npc.position.x += (dx / dist) * 0.15; npc.position.z += (dz / dist) * 0.15; } 
+                    } else { 
+                        // Caminha para o edifício na velocidade lenta do Nudge
+                        npc.position.x += (dx / dist) * npc.userData.speed; 
+                        npc.position.z += (dz / dist) * npc.userData.speed; 
+                    } 
                 } 
                 else if (!isPaused) {
-                    // Lógica de obediência do Peão à luz de cruzamento
                     let pPos = npc.userData.axis === 'X' ? npc.position.x : npc.position.z;
                     let pDir = npc.userData.axis === 'X' ? npc.userData.dirX : npc.userData.dirZ;
                     let pDist = pDir > 0 ? (-22 - pPos) : (pPos - 22);
                     
-                    // A luz verde para o peão é inversa à via em que ele caminha paralelamente
                     let isMyLightGreen = (npc.userData.axis === 'X') ? isGreenX : !isGreenX;
                     
                     if (!isMyLightGreen && pDist > 0 && pDist < 3) {
-                        npc.userData.speed = 0; // Pára antes de atravessar a faixa
+                        npc.userData.speed = 0; 
                     } else {
-                        npc.userData.speed = npc.userData.baseSpeed; // Caminha
+                        npc.userData.speed = npc.userData.baseSpeed; 
                     }
 
                     npc.position.x += npc.userData.dirX * npc.userData.speed; 
