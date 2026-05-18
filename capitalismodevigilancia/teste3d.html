@@ -118,7 +118,7 @@
     </div>
 
     <div id="dashboard">
-        <h1>DATACORP 3D v1.5</h1>
+        <h1>DATACORP OS v10 (Tráfego Dinâmico)</h1>
         <div class="status-box">
             <div class="dash-header-row">
                 <div class="data-title">Banco de Dados</div>
@@ -181,7 +181,7 @@
             }
         }
 
-        // --- 1. DADOS DE JOGO ---
+        // --- 1. DADOS DE JOGO E SEMÁFOROS ---
         setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString(); }, 1000);
         
         const arquetipos = [
@@ -199,7 +199,7 @@
         const META_FASE_1 = 150; const META_FASE_2 = 1500;
         let alvoAtual = null; let contratoAtivo = null; let isPaused = false; 
 
-        // TRÂNSITO (Semáforo)
+        // O trânsito alterna os semáforos
         let isGreenX = true; 
         setInterval(() => {
             isGreenX = !isGreenX;
@@ -208,7 +208,7 @@
             else { tStatus.innerText = "TRÂNSITO: FLUXO EIXO Z"; tStatus.style.color = "#f59e0b"; }
         }, 8000);
 
-        // --- 2. CONFIGURAÇÃO THREE.JS (OTIMIZADO) ---
+        // --- 2. CONFIGURAÇÃO THREE.JS ---
         const gameArea = document.getElementById('game-area');
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x8892b0); 
@@ -229,7 +229,7 @@
         sunLight.shadow.mapSize.height = 1024;
         scene.add(sunLight);
 
-        // --- 3. AMBIENTE URBANO ---
+        // --- 3. AMBIENTE URBANO (Calçadas e Zebras) ---
         const roadMat = new THREE.MeshLambertMaterial({ color: 0x222222 });
         const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), roadMat);
         ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
@@ -291,10 +291,9 @@
             });
         }
         preloadEmojis();
-
         function getEmojiSprite(emoji) { return new THREE.Sprite(emojiCache[emoji]); }
 
-        // --- 5. SISTEMA DE CARROS OTIMIZADO ---
+        // --- 5. SISTEMA DE CARROS COM CONVERSÃO À DIREITA ---
         const cars = [];
         const carGeo = new THREE.BoxGeometry(3, 2, 6);
         const carMats = [new THREE.MeshLambertMaterial({color: 0xef4444}), new THREE.MeshLambertMaterial({color: 0x3b82f6}), new THREE.MeshLambertMaterial({color: 0xffffff})];
@@ -305,18 +304,26 @@
             let headlights = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.5, 0.2), new THREE.MeshBasicMaterial({color: 0xffffee})); headlights.position.set(0, -0.2, 3); car.add(headlights);
             let taillights = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.5, 0.2), new THREE.MeshBasicMaterial({color: 0xff0000})); taillights.position.set(0, -0.2, -3); car.add(taillights);
             
-            // CORREÇÃO CRÍTICA DO BUG DE COLISÃO DO USERDATA
-            car.userData.brakeLights = taillights.material; 
-            
             let lane = Math.floor(Math.random() * 4);
-            if(lane === 0) { car.position.set(-100, 1, 6); car.userData.axis = 'X'; car.userData.dir = 1; car.userData.baseSpeed = 0.6; car.rotation.y = Math.PI/2; }
-            else if(lane === 1) { car.position.set(100, 1, -6); car.userData.axis = 'X'; car.userData.dir = -1; car.userData.baseSpeed = 0.6; car.rotation.y = -Math.PI/2; }
-            else if(lane === 2) { car.position.set(-6, 1, -100); car.userData.axis = 'Z'; car.userData.dir = 1; car.userData.baseSpeed = 0.6; car.rotation.y = 0; }
-            else if(lane === 3) { car.position.set(6, 1, 100); car.userData.axis = 'Z'; car.userData.dir = -1; car.userData.baseSpeed = 0.6; car.rotation.y = Math.PI; }
+            let willTurnRight = Math.random() < 0.35; // 35% de hipóteses de virar à direita no cruzamento
+
+            car.userData = {
+                brakeLights: taillights.material,
+                axis: lane <= 1 ? 'X' : 'Z',
+                dir: (lane === 1 || lane === 3) ? -1 : 1,
+                baseSpeed: 0.6,
+                willTurnRight: willTurnRight,
+                turnState: 0 // 0 = em frente, 1 = fez a curva
+            };
+
+            if(lane === 0) { car.position.set(-100, 1, 6); car.rotation.y = Math.PI/2; }
+            else if(lane === 1) { car.position.set(100, 1, -6); car.rotation.y = -Math.PI/2; }
+            else if(lane === 2) { car.position.set(-6, 1, -100); car.rotation.y = 0; }
+            else if(lane === 3) { car.position.set(6, 1, 100); car.rotation.y = Math.PI; }
             
             car.userData.speed = car.userData.baseSpeed; scene.add(car); cars.push(car);
         }
-        setInterval(() => { if(cars.length < 8 && !isPaused) spawnCar(); }, 3500);
+        setInterval(() => { if(cars.length < 12 && !isPaused) spawnCar(); }, 2500);
 
         // --- 6. REDE DE CÂMERAS PTZ ---
         const cameraNetwork = [
@@ -382,21 +389,22 @@
             if (e.code === 'Space' || e.key === 'e' || e.key === 'E') { e.preventDefault(); if (!btnAcao.disabled) btnAcao.click(); }
         });
 
-        // --- 7. SISTEMA DE NPCs OTIMIZADO ---
+        // --- 7. SISTEMA DE NPCs QUE RESPEITAM SEMÁFOROS ---
         const npcs = []; 
         const npcBodies = []; 
         const sharedBodyGeo = new THREE.CylinderGeometry(0.7, 0.9, 3.2, 8); 
         const sharedHeadGeo = new THREE.SphereGeometry(0.6, 8, 8); 
         
         const pRoutes = [
-            { sx: -19, sz: 80, ex: -19, ez: -80 }, { sx: 19, sz: -80, ex: 19, ez: 80 },   
-            { sx: -80, sz: -19, ex: 80, ez: -19 }, { sx: 80, sz: 19, ex: -80, ez: 19 }    
+            { sx: -19, sz: 80, ex: -19, ez: -80, axis: 'Z' }, // Anda no eixo Z (Sobe a Esquerda)
+            { sx: 19, sz: -80, ex: 19, ez: 80, axis: 'Z' },   // Anda no eixo Z (Desce a Direita)
+            { sx: -80, sz: -19, ex: 80, ez: -19, axis: 'X' }, // Anda no eixo X (Esq p Dir por Cima)
+            { sx: 80, sz: 19, ex: -80, ez: 19, axis: 'X' }    // Anda no eixo X (Dir p Esq por Baixo)
         ];
 
         function createNPC() {
             const group = new THREE.Group();
             const arq = arquetipos[Math.floor(Math.random() * arquetipos.length)];
-            
             const mat = new THREE.MeshLambertMaterial({ color: 0x94a3b8 });
             
             const body = new THREE.Mesh(sharedBodyGeo, mat); body.position.y = 1.6 + 1;
@@ -405,23 +413,25 @@
             const head = new THREE.Mesh(sharedHeadGeo, mat); head.position.y = 3.8 + 1;
             
             const emojiSprite = getEmojiSprite(arq.tipo);
-            emojiSprite.position.y = 5.2 + 1;
-            emojiSprite.scale.set(3, 3, 1);
+            emojiSprite.position.y = 5.2 + 1; emojiSprite.scale.set(3, 3, 1);
 
             group.add(body); group.add(head); group.add(emojiSprite);
+            
+            const route = pRoutes[Math.floor(Math.random() * pRoutes.length)];
             
             group.userData = {
                 id: "ID #" + Math.floor(Math.random()*90000 + 10000),
                 profissao: arq.profissoes[Math.floor(Math.random()*arq.profissoes.length)],
                 excedente: segredos[Math.floor(Math.random()*segredos.length)],
                 extraido: false, isZumbi: false, isNudging: false, nudgePath: [],
-                speed: Math.random() * 0.04 + 0.02,
-                bodyMesh: body, headMesh: head
+                baseSpeed: Math.random() * 0.04 + 0.02,
+                bodyMesh: body, headMesh: head,
+                axis: route.axis,
+                dirX: Math.sign(route.ex - route.sx),
+                dirZ: Math.sign(route.ez - route.sz)
             };
-
-            const route = pRoutes[Math.floor(Math.random() * pRoutes.length)];
+            group.userData.speed = group.userData.baseSpeed;
             group.position.set(route.sx, 0, route.sz);
-            group.userData.dirX = Math.sign(route.ex - route.sx); group.userData.dirZ = Math.sign(route.ez - route.sz);
 
             if(contratoAtivo && Math.random() > 0.4) {
                 if(contratoAtivo.cliente === "Rede Fast Food") group.userData.excedente = 'Pesquisou dietas restritivas';
@@ -530,7 +540,7 @@
                     alvo.userData.bodyMesh.material.color.setHex(0x475569); alvo.userData.bodyMesh.material.emissive.setHex(0x000000);
                     alvo.userData.headMesh.material.color.setHex(0x475569); alvo.userData.headMesh.material.emissive.setHex(0x000000);
                     alvo.children[2].material.opacity = 0.3; // Apaga o emoji
-                    alvo.userData.speed *= 0.3; setTimeout(() => { desativarAlvo(); gerarNovoContrato(); }, 600);
+                    alvo.userData.baseSpeed *= 0.3; setTimeout(() => { desativarAlvo(); gerarNovoContrato(); }, 600);
                     if(lucro >= META_FASE_2) setTimeout(() => { document.getElementById('modal-overlay').style.display='flex'; document.getElementById('modal-fase3').style.display='block'; isPaused=true; }, 1200);
                 } else { btnAcao.innerText = "ALVO INCORRETO"; btnAcao.disabled = true; setTimeout(() => { desativarAlvo(); }, 600); }
             }
@@ -546,7 +556,7 @@
             }
         });
 
-        // --- 9. LOOP DE ANIMAÇÃO ---
+        // --- 9. LOOP DE ANIMAÇÃO COM SEMÁFOROS E CONVERSÕES ---
         window.zoomThrottle = 0;
         function animate() {
             requestAnimationFrame(animate);
@@ -556,11 +566,33 @@
             for (let i = cars.length - 1; i >= 0; i--) {
                 let c = cars[i];
                 if(!isPaused) {
+                    
+                    // Lógica de Semáforo para Carros
                     let isMyLightGreen = (c.userData.axis === 'X') ? isGreenX : !isGreenX;
                     let pos = c.userData.axis === 'X' ? c.position.x : c.position.z;
+                    // Linha de paragem dos carros ajustada para antes das faixas (23)
                     let distToIntersection = c.userData.dir > 0 ? (-23 - pos) : (pos - 23);
                     
-                    if (!isMyLightGreen && distToIntersection > 0 && distToIntersection < 35) {
+                    // Lógica de Conversão à Direita
+                    if (c.userData.willTurnRight && c.userData.turnState === 0) {
+                        let pivot = c.userData.dir > 0 ? -6 : 6;
+                        let pastPivot = c.userData.dir > 0 ? (pos >= pivot) : (pos <= pivot);
+                        if (pastPivot) {
+                            if (c.userData.axis === 'X') {
+                                c.position.x = pivot; c.userData.axis = 'Z';
+                                if (c.userData.dir === 1) { c.userData.dir = 1; c.position.x = -6; c.rotation.y = 0; } 
+                                else { c.userData.dir = -1; c.position.x = 6; c.rotation.y = Math.PI; }
+                            } else {
+                                c.position.z = pivot; c.userData.axis = 'X';
+                                if (c.userData.dir === 1) { c.userData.dir = 1; c.position.z = 6; c.rotation.y = Math.PI/2; } 
+                                else { c.userData.dir = -1; c.position.z = -6; c.rotation.y = -Math.PI/2; }
+                            }
+                            c.userData.turnState = 1; 
+                            pos = c.userData.axis === 'X' ? c.position.x : c.position.z; // Atualiza variável pos
+                        }
+                    }
+
+                    if (!isMyLightGreen && distToIntersection > 0 && distToIntersection < 35 && c.userData.turnState === 0) {
                         c.userData.speed *= 0.85; c.userData.brakeLights.color.setHex(0xff0000); 
                     } else {
                         c.userData.speed = c.userData.baseSpeed; c.userData.brakeLights.color.setHex(0x550000); 
@@ -569,17 +601,16 @@
                     if(c.userData.axis === 'X') c.position.x += c.userData.dir * c.userData.speed;
                     else c.position.z += c.userData.dir * c.userData.speed;
                 }
+                
                 if (Math.abs(c.position.x) > 120 || Math.abs(c.position.z) > 120) { 
                     scene.remove(c); 
-                    c.children[0].material.dispose();
-                    c.children[1].material.dispose();
+                    if(c.userData.brakeLights) c.userData.brakeLights.dispose();
                     cars.splice(i, 1); 
                 }
             }
 
             for (let i = npcs.length - 1; i >= 0; i--) {
                 let npc = npcs[i];
-                
                 if(npc.children[2]) npc.children[2].lookAt(camera.position);
 
                 if (npc.userData.isNudging && npc.userData.nudgePath.length > 0) {
@@ -595,7 +626,22 @@
                     } else { npc.position.x += (dx / dist) * 0.15; npc.position.z += (dz / dist) * 0.15; } 
                 } 
                 else if (!isPaused) {
-                    npc.position.x += npc.userData.dirX * npc.userData.speed; npc.position.z += npc.userData.dirZ * npc.userData.speed;
+                    // Lógica de obediência do Peão à luz de cruzamento
+                    let pPos = npc.userData.axis === 'X' ? npc.position.x : npc.position.z;
+                    let pDir = npc.userData.axis === 'X' ? npc.userData.dirX : npc.userData.dirZ;
+                    let pDist = pDir > 0 ? (-22 - pPos) : (pPos - 22);
+                    
+                    // A luz verde para o peão é inversa à via em que ele caminha paralelamente
+                    let isMyLightGreen = (npc.userData.axis === 'X') ? isGreenX : !isGreenX;
+                    
+                    if (!isMyLightGreen && pDist > 0 && pDist < 3) {
+                        npc.userData.speed = 0; // Pára antes de atravessar a faixa
+                    } else {
+                        npc.userData.speed = npc.userData.baseSpeed; // Caminha
+                    }
+
+                    npc.position.x += npc.userData.dirX * npc.userData.speed; 
+                    npc.position.z += npc.userData.dirZ * npc.userData.speed;
                 }
                 if (Math.abs(npc.position.x) > 100 || Math.abs(npc.position.z) > 100) { disposeNPC(npc); npcs.splice(i, 1); }
             }
