@@ -19,7 +19,7 @@
         .scanline { position: absolute; width: 100%; height: 100%; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.2) 50%); background-size: 100% 4px; pointer-events: none; z-index: 50; }
         .vignette { position: absolute; width: 100%; height: 100%; box-shadow: 0 0 200px rgba(0,0,0,0.8) inset; pointer-events: none; z-index: 49; }
         .camera-ui { position: absolute; top: 20px; left: 20px; z-index: 51; font-size: 14px; color: rgba(255, 255, 255, 0.8); text-shadow: 0 0 2px #000; pointer-events: none; }
-        .controls-hint { position: absolute; bottom: 20px; left: 20px; z-index: 51; font-size: 12px; color: rgba(255, 255, 255, 0.6); pointer-events: none; }
+        .controls-hint { position: absolute; bottom: 20px; left: 20px; z-index: 51; font-size: 12px; color: rgba(255, 255, 255, 0.6); pointer-events: none; background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 4px; }
         .crosshair { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 40px; height: 40px; border: 1px solid rgba(255,255,255,0.3); border-radius: 50%; pointer-events: none; z-index: 51;}
         .rec-dot { display: inline-block; width: 10px; height: 10px; background-color: #f43f5e; border-radius: 50%; margin-right: 5px; animation: blink 1s infinite; }
         @keyframes blink { 0% {opacity: 1;} 50% {opacity: 0;} 100% {opacity: 1;} }
@@ -41,10 +41,13 @@
         .hidden-data { color: var(--text-alert); filter: blur(4px); transition: filter 0.5s ease; }
         .revealed-data { filter: blur(0); color: var(--text-success); }
         
-        #btn-acao { background-color: var(--text-alert); color: white; border: none; padding: 15px; font-family: inherit; font-size: 0.95rem; font-weight: bold; cursor: pointer; border-radius: 5px; margin-top: auto; transition: background 0.3s; }
+        #btn-acao { background-color: var(--text-alert); color: white; border: none; padding: 15px; font-family: inherit; font-size: 0.95rem; font-weight: bold; cursor: pointer; border-radius: 5px; margin-top: auto; transition: background 0.3s; position: relative; }
         #btn-acao:hover { background-color: #e11d48; filter: brightness(1.2); }
         #btn-acao:disabled { background-color: #475569; cursor: not-allowed; color: #94a3b8; }
-        
+        /* Pequeno atalho visual no botão */
+        #btn-acao::after { content: '[ESPAÇO]'; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 0.7rem; color: rgba(255,255,255,0.5); }
+        #btn-acao:disabled::after { display: none; }
+
         .log-entry { margin-bottom: 8px; } .key { color: #cbd5e1; } .val { color: #fcd34d; }
 
         /* Modais */
@@ -98,12 +101,12 @@
             <span style="color: #f43f5e;"><span class="rec-dot"></span><span id="clock">00:00:00</span></span>
         </div>
         <div class="controls-hint">
-            [MOVER O RATO] Guiar Lente da Câmara | [SCROLL] Zoom Óptico | [CLIQUE] Selecionar Alvo
+            [MOVER O RATO] Lente | [SCROLL] Zoom | [CLIQUE] Selecionar Alvo | <strong>[ESPAÇO] Executar Ação</strong>
         </div>
     </div>
 
     <div id="dashboard">
-        <h1>DATACORP OS v6.3</h1>
+        <h1>DATACORP OS v6.4</h1>
         <div class="status-box">
             <div class="dash-header-row">
                 <div class="data-title">Banco de Dados</div>
@@ -138,7 +141,9 @@
             }
         }
 
+        // O áudio precisa ser ativado com a primeira interação do usuário (clique ou teclado)
         document.body.addEventListener('pointerdown', initAudio, { once: true });
+        document.body.addEventListener('keydown', initAudio, { once: true });
 
         function playZoomSound() {
             if (!audioCtx) return;
@@ -283,7 +288,7 @@
         addCrosswalk(-13, 0, 0);
         addCrosswalk(13, 0, 0);
 
-        // --- 4. CONTROLO PTZ CONTÍNUO (EIXO X CORRIGIDO) ---
+        // --- 4. CONTROLO PTZ CONTÍNUO ---
         let panAngle = 0; 
         let tiltAngle = -0.3; 
         let targetPan = 0;
@@ -303,16 +308,12 @@
 
         gameArea.addEventListener('pointermove', (e) => {
             const rect = renderer.domElement.getBoundingClientRect();
-            
-            // Converte a posição do rato para uma escala de -1 a 1
             let mx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
             let my = ((e.clientY - rect.top) / rect.height) * 2 - 1;
             
-            // EIXO CORRIGIDO: mx positivo vira a câmara de forma positiva (direita)
             targetPan = mx * (Math.PI / 3); 
             targetTilt = -0.3 - (my * 0.2); 
             
-            // Atualiza vetor do raycaster (Eixo Y é invertido no Three.js)
             mouse.x = mx;
             mouse.y = -my;
             
@@ -331,9 +332,7 @@
             }
         });
 
-        // Evento de clique para selecionar alvo
         gameArea.addEventListener('pointerdown', (e) => {
-            initAudio(); 
             raycaster.setFromCamera(mouse, camera);
             const intersects = raycaster.intersectObjects(npcs, true);
             if(intersects.length > 0) { 
@@ -342,6 +341,18 @@
                 desativarAlvo(); 
             }
         });
+
+        // --- ATALHO DE TECLADO ---
+        window.addEventListener('keydown', (e) => {
+            // Se a tecla pressionada for Espaço ou E, e o botão de ação estiver ativo
+            if (e.code === 'Space' || e.key === 'e' || e.key === 'E') {
+                e.preventDefault(); // Evita que a página role para baixo acidentalmente
+                if (!btnAcao.disabled) {
+                    btnAcao.click(); // Dispara o clique do botão programaticamente
+                }
+            }
+        });
+
 
         // --- 5. SISTEMA DE NPCs ---
         const npcs = []; 
